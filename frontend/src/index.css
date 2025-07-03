@@ -1,0 +1,485 @@
+@import "tailwindcss";
+@import 'flag-icons/css/flag-icons.min.css';
+@import 'react-toastify/dist/ReactToastify.css';
+
+
+@theme {
+/* Font Configuration */
+--font-*: initial;
+--font-outfit: Outfit, sans-serif;
+--font-inter: Inter, sans-serif;
+
+/* Breakpoints */
+--breakpoint-*: initial;
+--breakpoint-2xsm: 375px;
+--breakpoint-xsm: 425px;
+--breakpoint-sm: 640px;
+--breakpoint-md: 768px;
+--breakpoint-lg: 1024px;
+--breakpoint-xl: 1280px;
+--breakpoint-2xl: 1536px;
+--breakpoint-3xl: 2000px;
+
+/* Typography Scale */
+--text-title-3xl: 80px;
+--text-title-3xl--line-height: 96px;
+--text-title-2xl: 72px;
+--text-title-2xl--line-height: 90px;
+--text-title-xl: 60px;
+--text-title-xl--line-height: 72px;
+--text-title-lg: 48px;
+--text-title-lg--line-height: 60px;
+--text-title-md: 36px;
+--text-title-md--line-height: 44px;
+--text-title-sm: 30px;
+--text-title-sm--line-height: 38px;
+--text-theme-xl: 20px;
+--text-theme-xl--line-height: 30px;
+--text-theme-lg: 18px;
+--text-theme-lg--line-height: 28px;
+--text-theme-md: 16px;
+--text-theme-md--line-height: 24px;
+--text-theme-sm: 14px;
+--text-theme-sm--line-height: 20px;
+--text-theme-xs: 12px;
+--text-theme-xs--line-height: 18px;
+
+/* Base Colors */
+--color-current: currentColor;
+--color-transparent: transparent;
+--color-white: #ffffff;
+--color-black: #0f172a;
+
+/* Primary Blue Theme Colors */
+--color-primary-25: #f8faff;
+--color-primary-50: #eff6ff;
+--color-primary-100: #dbeafe;
+--color-primary-200: #bfdbfe;
+--color-primary-300: #93c5fd;
+--color-primary-400: #60a5fa;
+--color-primary-500: #3b82f6;
+--color-primary-600: #2563eb;
+--color-primary-700: #1d4ed8;
+--color-primary-800: #1e40af;
+--color-primary-900: #1e3a8a;
+--color-primary-950: #172554;
+
+/* Secondary Blue Colors */
+--color-secondary-25: #f0f9ff;
+--color-secondary-50: #e0f2fe;
+--color-secondary-100: #bae6fd;
+--color-secondary-200: #7dd3fc;
+--color-secondary-300: #38bdf8;
+--color-secondary-400: #0ea5e9;
+--color-secondary-500: #0284c7;
+--color-secondary-600: #0369a1;
+--color-secondary-700: #075985;
+--color-secondary-800: #0c4a6e;
+--color-secondary-900: #0f3747;
+--color-secondary-950: #082f49;
+
+/* Accent Colors */
+--color-accent-25: #fefcff;
+--color-accent-50: #fdf4ff;
+--color-accent-100: #fae8ff;
+--color-accent-200: #f3d4fe;
+--color-accent-300: #e9a9fc;
+--color-accent-400: #d571f7;
+--color-accent-500: #c040ed;
+--color-accent-600: #a21ccf;
+--color-accent-700: #8716aa;
+--color-accent-800: #6d1488;
+--color-accent-900: #591470;
+--color-accent-950: #3b0a47;
+
+/* Gray Scale */
+--color-gray-25: #fcfcfd;
+--color-gray-50: #f8fafc;
+--color-gray-100: #f1f5f9;
+--color-gray-200: #e2e8f0;
+--color-gray-300: #cbd5e1;
+--color-gray-400: #94a3b8;
+--color-gray-500: #64748b;
+--color-gray-600: #475569;
+--color-gray-700: #334155;
+--color-gray-800: #1e293b;
+--color-gray-900: #0f172a;
+--color-gray-950: #020617;
+
+/* Success Colors */
+--color-success-25: #f0fdf4;
+--color-success-50: #dcfce7;
+--color-success-100: #bbf7d0;
+--color-success-200: #86efac;
+--color-success-300: #4ade80;
+--color-success-400: #22c55e;
+--color-success-500: #16a34a;
+--color-success-600: #15803d;
+--color-success-700: #166534;
+--color-success-800: #14532d;
+--color-success-900: #14532d;
+--color-success-950: #052e16;
+
+/* Warning Colors */
+--color-warning-25: #fffbeb;
+--color-warning-50: #fef3c7;
+--color-warning-100: #fde68a;
+--color-warning-200: #fcd34d;
+--color-warning-300: #fbbf24;
+--color-warning-400: #f59e0b;
+--color-warning-500: #d97706;
+--color-warning-600: #b45309;
+--color-warning-700: #92400e;
+--color-warning-800: #78350f;
+--color-warning-900: #451a03;
+--color-warning-950: #451a03;
+
+/* Error Colors */
+--color-error-25: #fef2f2;
+--color-error-50: #fecaca;
+--color-error-100: #fca5a5;
+--color-error-200: #f87171;
+--color-error-300: #ef4444;
+--color-error-400: #dc2626;
+--color-error-500: #b91c1c;
+--color-error-600: #991b1b;
+--color-error-700: #7f1d1d;
+--color-error-800: #7f1d1d;
+--color-error-900: #450a0a;
+--color-error-950: #450a0a;
+
+/* Event Ticket System Specific Colors */
+--color-ticket-vip: #7c3aed;
+--color-ticket-premium: #2563eb;
+--color-ticket-standard: #059669;
+--color-ticket-early-bird: #dc2626;
+
+/* Shadows */
+--shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+--shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+--shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+--shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+--shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+--shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+--shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+--shadow-focus: 0 0 0 3px rgb(59 130 246 / 0.5);
+--shadow-ticket-card: 0 4px 6px -1px rgb(59 130 246 / 0.1), 0 2px 4px -2px rgb(59 130 246 / 0.1);
+
+/* Event Booking Specific Shadows */
+--shadow-event-card: 0 8px 25px -6px rgb(59 130 246 / 0.15);
+--shadow-event-card-hover: 0 12px 35px -8px rgb(59 130 246 / 0.25);
+--shadow-ticket-selected: 0 0 0 2px rgb(59 130 246 / 1);
+
+/* Z-Index Scale */
+--z-index-dropdown: 1000;
+--z-index-sticky: 1020;
+--z-index-fixed: 1030;
+--z-index-modal-backdrop: 1040;
+--z-index-modal: 1050;
+--z-index-popover: 1060;
+--z-index-tooltip: 1070;
+
+/* Border Radius */
+--radius-none: 0px;
+--radius-sm: 0.125rem;
+--radius-md: 0.375rem;
+--radius-lg: 0.5rem;
+--radius-xl: 0.75rem;
+--radius-2xl: 1rem;
+--radius-3xl: 1.5rem;
+--radius-full: 9999px;
+
+/* Spacing for Event Cards */
+--spacing-event-card: 1.5rem;
+--spacing-ticket-card: 1rem;
+}
+
+/* Base Styles */
+@layer base {
+*,
+::after,
+::before,
+::backdrop,
+::file-selector-button {
+border-color: var(--color-gray-200);
+}
+
+body {
+@apply bg-gray-50 font-outfit text-gray-900 antialiased;
+}
+
+button:not(:disabled),
+[role="button"]:not(:disabled) {
+cursor: pointer;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+width: 6px;
+height: 6px;
+}
+
+::-webkit-scrollbar-track {
+@apply bg-gray-100;
+}
+
+::-webkit-scrollbar-thumb {
+@apply bg-gray-300 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+@apply bg-gray-400;
+}
+}
+
+/* Event Booking Components */
+@utility event-card {
+@apply bg-white rounded-2xl shadow-event-card border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-event-card-hover hover:-translate-y-1;
+}
+
+@utility event-card-header {
+@apply relative h-48 bg-gradient-to-br from-primary-500 to-secondary-500 overflow-hidden;
+}
+
+@utility event-card-content {
+@apply p-6 space-y-4;
+}
+
+@utility event-title {
+@apply text-xl font-semibold text-gray-900 line-clamp-2;
+}
+
+@utility event-date {
+@apply text-sm font-medium text-primary-600 bg-primary-50 px-3 py-1 rounded-full inline-block;
+}
+
+@utility event-location {
+@apply text-sm text-gray-600 flex items-center gap-2;
+}
+
+@utility event-price {
+@apply text-2xl font-bold text-gray-900;
+}
+
+@utility event-price-from {
+@apply text-sm text-gray-500 font-normal;
+}
+
+/* Ticket Type Badges */
+@utility ticket-vip {
+@apply bg-purple-100 text-purple-800 border border-purple-200;
+}
+
+@utility ticket-premium {
+@apply bg-primary-100 text-primary-800 border border-primary-200;
+}
+
+@utility ticket-standard {
+@apply bg-green-100 text-green-800 border border-green-200;
+}
+
+@utility ticket-early-bird {
+@apply bg-red-100 text-red-800 border border-red-200;
+}
+
+/* Buttons */
+@utility btn-primary {
+@apply bg-primary-600 hover:bg-primary-700 text-white font-medium py-3 px-6 rounded-xl transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+}
+
+@utility btn-secondary {
+@apply bg-white hover:bg-gray-50 text-primary-600 font-medium py-3 px-6 rounded-xl border border-primary-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+}
+
+@utility btn-outline {
+@apply bg-transparent hover:bg-primary-50 text-primary-600 font-medium py-3 px-6 rounded-xl border border-primary-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+}
+
+@utility btn-ghost {
+@apply bg-transparent hover:bg-primary-50 text-primary-600 font-medium py-3 px-6 rounded-xl transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+}
+
+/* Form Elements */
+@utility form-input {
+@apply w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 bg-white;
+}
+
+@utility form-select {
+@apply w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 bg-white appearance-none;
+}
+
+@utility form-checkbox {
+@apply w-5 h-5 text-primary-600 bg-white border-gray-300 rounded focus:ring-primary-500 focus:ring-2;
+}
+
+@utility form-radio {
+@apply w-5 h-5 text-primary-600 bg-white border-gray-300 focus:ring-primary-500 focus:ring-2;
+}
+
+/* Navigation */
+@utility nav-link {
+@apply text-gray-700 hover:text-primary-600 font-medium transition-colors duration-200 px-3 py-2 rounded-lg hover:bg-primary-50;
+}
+
+@utility nav-link-active {
+@apply text-primary-600 bg-primary-50 font-medium px-3 py-2 rounded-lg;
+}
+
+/* Search and Filter Components */
+@utility search-container {
+@apply relative flex-1 max-w-md;
+}
+
+@utility search-input {
+@apply w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white;
+}
+
+@utility filter-chip {
+@apply inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 transition-colors duration-200 cursor-pointer;
+}
+
+@utility filter-chip-active {
+@apply inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-primary-600 text-white hover:bg-primary-700 transition-colors duration-200 cursor-pointer;
+}
+
+/* Event Details Page */
+@utility event-hero {
+@apply relative h-96 bg-gradient-to-br from-primary-600 via-primary-700 to-secondary-600 overflow-hidden;
+}
+
+@utility event-info-card {
+@apply bg-white rounded-2xl shadow-lg border border-gray-100 p-6;
+}
+
+@utility ticket-selection-card {
+@apply bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sticky top-6;
+}
+
+@utility ticket-type-card {
+@apply border border-gray-200 rounded-xl p-4 hover:border-primary-300 hover:bg-primary-25 transition-all duration-200 cursor-pointer;
+}
+
+@utility ticket-type-card-selected {
+@apply border-2 border-primary-500 bg-primary-50 shadow-ticket-selected;
+}
+
+/* Checkout Components */
+@utility checkout-section {
+@apply bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-6;
+}
+
+@utility order-summary {
+@apply bg-gray-50 rounded-xl p-4 space-y-3;
+}
+
+@utility payment-method {
+@apply border border-gray-200 rounded-xl p-4 hover:border-primary-300 hover:bg-primary-25 transition-all duration-200 cursor-pointer flex items-center gap-4;
+}
+
+@utility payment-method-selected {
+@apply border-2 border-primary-500 bg-primary-50;
+}
+
+/* Status Badges */
+@utility status-confirmed {
+@apply bg-success-100 text-success-800 px-3 py-1 rounded-full text-sm font-medium;
+}
+
+@utility status-pending {
+@apply bg-warning-100 text-warning-800 px-3 py-1 rounded-full text-sm font-medium;
+}
+
+@utility status-cancelled {
+@apply bg-error-100 text-error-800 px-3 py-1 rounded-full text-sm font-medium;
+}
+
+/* Loading States */
+@utility skeleton {
+@apply animate-pulse bg-gray-200 rounded;
+}
+
+@utility loading-spinner {
+@apply animate-spin rounded-full border-2 border-gray-300 border-t-primary-600;
+}
+
+/* Responsive Utilities */
+@utility container-custom {
+@apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+@utility section-padding {
+@apply py-12 sm:py-16 lg:py-20;
+}
+
+/* Custom Dark Mode Variants */
+@custom-variant dark (&:is(.dark *));
+
+/* Dark mode overrides */
+.dark {
+--color-gray-50: #0f172a;
+--color-gray-100: #1e293b;
+--color-gray-200: #334155;
+--color-gray-800: #f1f5f9;
+--color-gray-900: #f8fafc;
+}
+
+.dark .event-card {
+@apply bg-gray-800 border-gray-700;
+}
+
+.dark .event-title {
+@apply text-gray-100;
+}
+
+.dark .form-input,
+.dark .form-select {
+@apply bg-gray-800 border-gray-600 text-gray-100;
+}
+
+.dark .nav-link {
+@apply text-gray-300 hover:text-primary-400 hover:bg-primary-900/20;
+}
+
+.dark .nav-link-active {
+@apply text-primary-400 bg-primary-900/20;
+}
+
+/* Animation Classes */
+@keyframes fadeInUp {
+from {
+opacity: 0;
+transform: translateY(30px);
+}
+to {
+opacity: 1;
+transform: translateY(0);
+}
+}
+
+@utility fade-in-up {
+animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes slideInRight {
+from {
+opacity: 0;
+transform: translateX(30px);
+}
+to {
+opacity: 1;
+transform: translateX(0);
+}
+}
+
+@utility slide-in-right {
+animation: slideInRight 0.6s ease-out;
+}
+
+/* Hover Effects */
+@utility hover-lift {
+@apply transition-transform duration-300 hover:-translate-y-2;
+}
+
+@utility hover-glow {
+@apply transition-shadow duration-300 hover:shadow-2xl hover:shadow-primary-500/25;
+}
