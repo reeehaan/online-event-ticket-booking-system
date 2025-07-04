@@ -2,14 +2,17 @@ import {
   BrowserRouter as Router,
   Routes,
   Route,
-  Outlet,
+  Navigate,
 } from 'react-router-dom';
-import PropTypes from 'prop-types';
+
+// Import route protection components
+import { ProtectedRoute, GuestRoute } from './common/ProtectedRoutes';
+import DynamicLayout from './layout/DynamicLayout';
+
+// Import page components
 import SignupForm from "./pages/Sign-up/Signup";
 import LoginForm from "./pages/Login/Login";
 import ForgotPasswordForm from "./pages/Forget-password/ForgotPassword";
-import Layout from './layout/Layout';
-import ProtectedRoute from './common/ProjectedRoutes';
 
 import EventsPage from "./Components/EventPages/EventsPage";
 import EventDetails from "./Components/EventPages/EventDetails";
@@ -22,45 +25,92 @@ import OrganizerProfile from './pages/Organizer/OrganizerProfile';
 import CreateEvent from './pages/Organizer/CreateEvent';
 import ManageEvents from './pages/Organizer/ManageEvents';
 
-
-
-
 function App() {
   return (
-  
     <Router>
-      
       <Routes>
-        <Route element={<Layout/>}>
-          <Route path="/sign-up" element={<SignupForm/>}/>
-          <Route path="/login" element={<LoginForm/>}/>
-          <Route path="/forgot-password" element={<ForgotPasswordForm/>}/>
-          <Route path="/" element={<UserLandingPage/>}/>
+        {/* Layout wrapper with dynamic user type detection */}
+        <Route element={<DynamicLayout />}>
           
-          <Route element={<ProtectedRoute allowedUserType='attendee' />}>
-          {/* User's Routes */}
+          {/* Guest Routes - Only accessible when not logged in */}
+          <Route path="/sign-up" element={
+            <GuestRoute>
+              <SignupForm />
+            </GuestRoute>
+          } />
           
-          <Route path="/events-page" element={<EventsPage/>}/>
-          <Route path="/event-details" element={<EventDetails/>}/>
-          <Route path="/user-profile" element={<UserProfile/>}/>
-          <Route path="/booking-history" element={<BookingHistory/>}/>
-        </Route>
+          <Route path="/login" element={
+            <GuestRoute>
+              <LoginForm />
+            </GuestRoute>
+          } />
+          
+          <Route path="/forgot-password" element={
+            <GuestRoute>
+              <ForgotPasswordForm />
+            </GuestRoute>
+          } />
 
-        <Route element={<ProtectedRoute allowedUserType='organizer' />}>
-          {/* Org's Routes */}
-          <Route path="/" element={<OrganizerLandingPage/>}/>
-          <Route path="/organizer-profile" element={<OrganizerProfile/>}/>
-          <Route path="/organizer-create-event" element={<CreateEvent/>}/>
-          <Route path="/organizer-manage-events" element={<ManageEvents/>}/>
+          {/* Public Landing Page - accessible to guests and attendees */}
+          <Route path="/" element={<UserLandingPage />} />
+
+          {/* Protected Attendee Routes */}
+          <Route path="/events-page" element={
+            <ProtectedRoute allowedUserType="attendee">
+              <EventsPage />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/event-details" element={
+            <ProtectedRoute allowedUserType="attendee">
+              <EventDetails />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/user-profile" element={
+            <ProtectedRoute allowedUserType="attendee">
+              <UserProfile />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/booking-history" element={
+            <ProtectedRoute allowedUserType="attendee">
+              <BookingHistory />
+            </ProtectedRoute>
+          } />
+
+          {/* Protected Organizer Routes */}
+          <Route path="/organizer-dashboard" element={
+            <ProtectedRoute allowedUserType="organizer">
+              <OrganizerLandingPage />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/organizer-profile" element={
+            <ProtectedRoute allowedUserType="organizer">
+              <OrganizerProfile />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/organizer-create-event" element={
+            <ProtectedRoute allowedUserType="organizer">
+              <CreateEvent />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/organizer-manage-events" element={
+            <ProtectedRoute allowedUserType="organizer">
+              <ManageEvents />
+            </ProtectedRoute>
+          } />
+
+          {/* Catch all route - redirect to appropriate page */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+          
         </Route>
-        
-        </Route>
-        
       </Routes>
-      
     </Router>
-  
-  )
+  );
 }
 
-export default App
+export default App;

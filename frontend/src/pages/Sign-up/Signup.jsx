@@ -17,11 +17,15 @@ Globe,
 Camera
 } from "lucide-react";
 
+import  axios  from 'axios';
+import { useNavigate } from "react-router-dom";
+
 function SignupForm() {
 const [currentStep, setCurrentStep] = useState('userType'); // 'userType', 'attendeeForm', 'organizerForm'
 const [selectedUserType, setSelectedUserType] = useState('');
 const [showPassword, setShowPassword] = useState(false);
 const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+const navigate = useNavigate();
 
 const [attendeeForm, setAttendeeForm] = useState({
 email: "",
@@ -163,20 +167,46 @@ setErrors(newErrors);
 return Object.keys(newErrors).length === 0;
 };
 
-const handleAttendeeSubmit = (e) => {
-e.preventDefault();
-if (validateAttendeeForm()) {
-    console.log("Attendee form submitted:", attendeeForm);
-    alert("Attendee registration successful!");
+//registration function 
+const handleRegistration = async (formData, userType) => {
+try {
+    const response = await axios.post('http://localhost:3000/api/user/register', {
+    ...formData,
+    userType: userType
+    });
+    
+    if (response.status === 200 || response.status === 201) {
+        toast.success(`${userType} registration successful! Redirecting to login...`);
+    
+    setTimeout(() => {
+        navigate('/login');
+    }, 2000);
+    }
+    
+} catch (error) {
+    console.error('Registration error:', error);
+    
+    if (error.response) {
+    toast.error(`Registration failed: ${error.response.data.message || 'Please try again'}`);
+    } else if (error.request) {
+    toast.error('Network error. Please check your connection and try again.');
+    } else {
+    toast.error('Registration failed. Please try again.');
+    }
 }
 };
+const handleAttendeeSubmit = async (e) => {
+    e.preventDefault();
+        if (validateAttendeeForm()) {
+        await handleRegistration(attendeeForm, 'attendee');
+    }
+};
 
-const handleOrganizerSubmit = (e) => {
-e.preventDefault();
-if (validateOrganizerForm()) {
-    console.log("Organizer form submitted:", organizerForm);
-    alert("Organizer registration successful! Your account will be reviewed within 24 hours.");
-}
+const handleOrganizerSubmit = async (e) => {
+    e.preventDefault();
+    if (validateOrganizerForm()) {
+        await handleRegistration(organizerForm, 'organizer');
+    }
 };
 
 const goBack = () => {
@@ -495,6 +525,7 @@ return (
             </div>
 
             <button
+            onClick={() => handleAttendeeSubmit}
             type="submit"
             className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all transform hover:scale-[1.02] active:scale-[0.98]"
             >
@@ -794,6 +825,7 @@ return (
             </div>
 
             <button
+            onClick={()=> handleOrganizerSubmit}
             type="submit"
             className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white py-3 px-6 rounded-lg font-medium hover:from-purple-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all transform hover:scale-[1.02] active:scale-[0.98]"
             >

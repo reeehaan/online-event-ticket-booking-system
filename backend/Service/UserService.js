@@ -147,4 +147,38 @@ try {
 }
 };
 
-module.exports = { register };
+
+
+const login = async (req, res) => {
+    const user = await User.findOne({email : req.body.email});
+
+    if(!user){
+        return res.status(400).send({error:'invalid email or password'});
+    }
+    //compare the password
+    const match = await bcrypt.compare(req.body.password, user.password);
+    if(!match){
+        return res.status(400).send({error:'invalid email or password'});
+    }
+
+    const token = jwt.sign(
+    {
+        _id: user._id,
+        email: user.email,
+        userType: user.userType,
+        fullname : user.firstName +" "+ user.lastName,
+        exp: Math.floor(Date.now() / 1000 + 1 * 24 * 60 * 60),
+    },
+        process.env.TOKEN_SECRET
+    );
+    res.header('auth-token', token);
+    res.json({
+    token,
+    email: user.email,
+    userType: user.userType,
+    fullname: user.firstName +" "+ user.lastName,
+    });
+};
+
+
+module.exports = { register, login };

@@ -15,6 +15,7 @@ app.use(cors());
 
 app.use('/api/user',user);
 
+
 const port = process.env.PORT || 3000;
 const server = app.listen(port, () =>
     console.log(`Server started on port ${port}`) 

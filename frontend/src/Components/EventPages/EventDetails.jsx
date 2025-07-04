@@ -170,7 +170,7 @@ return (
 
         {/* Show Times */}
         <div>
-            <h3 className="text-xl font-semibold mb-4">Show Times</h3>
+            <h3 className="text-xl font-semibold mb-4">Time</h3>
             <div className="space-y-4">
             {showTimes.map((show) => (
                 <div key={show.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">

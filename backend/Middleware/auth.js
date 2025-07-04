@@ -17,16 +17,16 @@
     }
     };
 
-    // Verify client role middleware
+    // Verify attendee role middleware
     const verifyAttendee = (req, res, next) => {
-    if (req.user.role !== 'attendee') {
+    if (req.user.userType !== 'attendee') {
         return res.status(403).send('Access Denied: Client role required');
     }
     next();
     };
 
     const verifyOrganizer = (req, res, next) => {
-    if (req.user.role !== 'organizer') {
+    if (req.user.userType !== 'organizer') {
         return res.status(403).send('Access Denied: Freelancer role required');
     }
     next();
