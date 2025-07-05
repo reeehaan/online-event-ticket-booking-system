@@ -181,7 +181,7 @@ return (
         )}
         </div>
 
-        <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded-xl hover:bg-blue-700">
+        <button type="submit" className="w-full bg-purple-600 text-white py-2 rounded-xl hover:bg-purple-700">
         Create Event
         </button>
     </form>

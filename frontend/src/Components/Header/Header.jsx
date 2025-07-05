@@ -39,11 +39,11 @@ const Header = ({ userType = 'guest' }) => {
         setCurrentUserType(userType);
     }, [userType]);
 
-    // Check authentication status - this is the main fix
+    // Check authentication status
     useEffect(() => {
         const checkAuthStatus = () => {
             const fullname = localStorage.getItem('fullName');
-            const token = localStorage.getItem('token'); // Add token check for better validation
+            const token = localStorage.getItem('token'); 
             
             if (userType !== 'guest' && (fullname || token)) {
                 setIsLoggedIn(true);
@@ -57,7 +57,7 @@ const Header = ({ userType = 'guest' }) => {
         // Check immediately
         checkAuthStatus();
 
-        // Listen for storage changes (when localStorage is updated in another tab/window)
+        // Listen for storage changes 
         const handleStorageChange = (e) => {
             if (e.key === 'fullName' || e.key === 'token') {
                 checkAuthStatus();
@@ -229,7 +229,7 @@ const Header = ({ userType = 'guest' }) => {
         // Dispatch custom event to notify other components
         window.dispatchEvent(new CustomEvent('localStorageUpdate'));
         
-        navigate('/user-dashboard');
+        navigate('/');
     };
 
     return (
@@ -278,8 +278,8 @@ const Header = ({ userType = 'guest' }) => {
                                     className={`flex items-center gap-2 p-2 rounded-full transition-all duration-300 ${isScrolled ? 'text-gray-700 hover:bg-gray-100' : 'text-white hover:bg-white/20'}`}
                                 >
                                     <User className="w-5 h-5 lg:w-6 lg:h-6" />
-                                    <span className="text-sm font-medium hidden md:inline">{userName}</span>
-                                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full hidden lg:inline">
+                                    <span className="text-m font-extrabold hidden md:inline">{userName}</span>
+                                    <span className="text-xs bg-blue-100 text-blue-400 px-2 py-1 rounded-full hidden lg:inline">
                                         {currentUserType}
                                     </span>
                                 </button>
