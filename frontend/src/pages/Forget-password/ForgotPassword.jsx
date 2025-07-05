@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { Mail, Lock, Eye, EyeOff, ArrowLeft, CheckCircle } from "lucide-react";
+import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
 function ForgotPasswordForm() {
-const [step, setStep] = useState(1); // 1: email validation, 2: password reset, 3: success
+const [step, setStep] = useState(1); // 1: email verification, 2: password reset, 3: success
 const [showPassword, setShowPassword] = useState(false);
 const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 const [isLoading, setIsLoading] = useState(false);
@@ -15,6 +16,7 @@ confirmPassword: ""
 });
 
 const [errors, setErrors] = useState({});
+
 const navigate = useNavigate();
 
 const handleInputChange = (e) => {
@@ -66,17 +68,29 @@ setErrors(newErrors);
 return Object.keys(newErrors).length === 0;
 };
 
-const handleEmailSubmit = async () => {
+const handleEmailVerification = async () => {
 if (!validateEmail()) return;
 
 setIsLoading(true);
 
-// Simulate email validation API call
-setTimeout(() => {
-    setIsLoading(false);
-    console.log("Email validated:", form.email);
+try {
+    const response = await axios.post('http://localhost:3000/api/user/forget-password', {
+    email: form.email,
+    step: 'verify_email'
+    });
+
+    if (response.data.success) {
     setStep(2); // Move to password reset step
-}, 1500);
+    } else {
+    setErrors({ email: response.data.message });
+    }
+} catch (error) {
+    console.error('Email verification error:', error);
+    const errorMessage = error.response?.data?.message || 'An error occurred. Please try again.';
+    setErrors({ email: errorMessage });
+} finally {
+    setIsLoading(false);
+}
 };
 
 const handlePasswordReset = async () => {
@@ -84,16 +98,36 @@ if (!validatePasswords()) return;
 
 setIsLoading(true);
 
-// Simulate password reset API call
-setTimeout(() => {
-    setIsLoading(false);
-    console.log("Password reset successful for:", form.email);
+try {
+    const response = await axios.post('http://localhost:3000/api/user/forget-password', {
+    email: form.email,
+    password: form.password,
+    step: 'reset_password'
+    });
+
+    if (response.data.success) {
     setStep(3); // Move to success step
-}, 2000);
+    } else {
+    setErrors({ password: response.data.message });
+    }
+} catch (error) {
+    console.error('Password reset error:', error);
+    const errorMessage = error.response?.data?.message || 'An error occurred. Please try again.';
+    setErrors({ password: errorMessage });
+} finally {
+    setIsLoading(false);
+}
 };
 
 const handleBackToLogin = () => {
-// You can replace this with your navigation logic
+// Reset form and redirect to login
+setForm({
+    email: "",
+    password: "",
+    confirmPassword: ""
+});
+setStep(1);
+
 navigate('/login');
 };
 
@@ -148,7 +182,7 @@ return (
         </h1>
         <p className="text-blue-100 text-center mt-2">
             {step === 1 
-            ? "Enter your email to reset password" 
+            ? "Enter your email to verify your account" 
             : "Create your new password"
             }
         </p>
@@ -188,14 +222,14 @@ return (
                 </div>
 
                 <button
-                onClick={handleEmailSubmit}
+                onClick={handleEmailVerification}
                 disabled={isLoading}
                 className="w-full bg-gradient-to-r from-blue-600 to-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:from-blue-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
                 {isLoading ? (
                     <div className="flex items-center justify-center">
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                    Verifying...
+                    Verifying Email...
                     </div>
                 ) : (
                     "Verify Email"
@@ -318,7 +352,7 @@ return (
             <p className="text-sm text-gray-500">
                 Don't have an account?{' '}
                 <button
-                onClick={() => navigate('/sign-up')}
+                onClick={() => console.log('Navigate to sign up')}
                 className="text-blue-600 hover:text-blue-500 font-medium"
                 >
                 Create one here

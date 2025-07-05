@@ -181,4 +181,103 @@ const login = async (req, res) => {
 };
 
 
-module.exports = { register, login };
+const hashPassword = async (password) => {
+const saltRounds = 12;
+return await bcrypt.hash(password, saltRounds);
+};
+
+// Simplified Forgot Password - Check email and reset password
+const forgotPassword = async (req, res) => {
+try {
+const { email, password, step } = req.body;
+
+// Step 1: Verify email exists
+if (step === 'verify_email') {
+    // Validate email
+    if (!email) {
+    return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+    });
+    }
+
+    // Find user by email
+    const user = await User.findOne({ email: email.toLowerCase() });
+
+    if (!user) {
+    return res.status(400).json({
+        success: false,
+        message: 'No account found with this email address'
+    });
+    }
+
+    // Email exists, allow user to proceed
+    res.json({
+    success: true,
+    message: 'Email verified successfully',
+    email: user.email
+    });
+
+} 
+// Step 2: Reset password
+else if (step === 'reset_password') {
+    // Validate input
+    if (!email || !password) {
+    return res.status(400).json({
+        success: false,
+        message: 'Email and password are required'
+    });
+    }
+
+    // Validate password strength
+    if (password.length < 8) {
+    return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 8 characters long'
+    });
+    }
+
+    // Find user by email
+    const user = await User.findOne({ email: email.toLowerCase() });
+
+    if (!user) {
+    return res.status(400).json({
+        success: false,
+        message: 'No account found with this email address'
+    });
+    }
+
+    // Hash new password
+    const hashedPassword = await hashPassword(password);
+
+    // Update user password
+    await User.findByIdAndUpdate(user._id, {
+    password: hashedPassword,
+    passwordUpdatedAt: new Date()
+    });
+
+    console.log(`Password reset successful for: ${user.email}`);
+
+    res.json({
+    success: true,
+    message: 'Password has been successfully reset'
+    });
+
+} else {
+    return res.status(400).json({
+    success: false,
+    message: 'Invalid step parameter'
+    });
+}
+
+} catch (error) {
+console.error('Forgot password error:', error);
+res.status(500).json({
+    success: false,
+    message: 'An error occurred while processing your request'
+});
+}
+};
+
+
+module.exports = { register, login, forgotPassword };
