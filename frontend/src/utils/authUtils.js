@@ -75,7 +75,7 @@ export const logoutUser = () => {
 localStorage.removeItem('authToken');
 localStorage.removeItem('userType');
 localStorage.removeItem('fullName');
-window.location.href = '/login';
+window.location.href = '/';
 };
 
 // Utility function to check if token is expired
