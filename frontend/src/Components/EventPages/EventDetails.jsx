@@ -1,44 +1,247 @@
-import {  useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Calendar, MapPin, Clock, Users, ArrowLeft } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-const EventDetails = () => {
+// Import the TicketPurchase component
+// import TicketPurchase from './TicketPurchase';
 
+// For demo purposes, I'll include the component here
+const TicketPurchase = ({ show, event, onClose, onPurchase }) => {
+const [quantity, setQuantity] = useState(1);
+const [customerInfo, setCustomerInfo] = useState({
+name: '',
+email: '',
+phone: '',
+address: ''
+});
+const [isProcessing, setIsProcessing] = useState(false);
+
+const pricePerTicket = parseInt(show.price.replace('Rs. ', '').replace(',', ''));
+const totalPrice = pricePerTicket * quantity;
+
+const handleQuantityChange = (action) => {
+if (action === 'increment' && quantity < 10) {
+    setQuantity(quantity + 1);
+} else if (action === 'decrement' && quantity > 1) {
+    setQuantity(quantity - 1);
+}
+};
+
+const handleInputChange = (field, value) => {
+setCustomerInfo(prev => ({
+    ...prev,
+    [field]: value
+}));
+};
+
+const handlePurchase = async () => {
+if (!customerInfo.name || !customerInfo.email || !customerInfo.phone) {
+    alert('Please fill in all required fields');
+    return;
+}
+
+setIsProcessing(true);
+
+try {
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    const purchaseData = {
+    event: event.title,
+    ticketType: show.type,
+    quantity,
+    totalPrice,
+    customerInfo,
+    orderDate: new Date().toISOString()
+    };
+    
+    onPurchase(purchaseData);
+    alert('Ticket purchased successfully!');
+    onClose();
+} catch (error) {
+    alert('Purchase failed. Please try again.');
+} finally {
+    setIsProcessing(false);
+}
+};
+
+return (
+<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+    <div className="flex items-center justify-between p-6 border-b">
+        <h2 className="text-xl font-bold text-gray-900">Purchase Tickets</h2>
+        <button
+        onClick={onClose}
+        className="text-gray-400 hover:text-gray-600 transition-colors"
+        >
+        ×
+        </button>
+    </div>
+
+    <div className="p-6 space-y-6">
+        <div className="bg-gray-50 rounded-lg p-4">
+        <h3 className="font-semibold text-gray-900 mb-2">{event.title}</h3>
+        <div className="space-y-1 text-sm text-gray-600">
+            <p><strong>Date:</strong> {event.date}</p>
+            <p><strong>Venue:</strong> {event.location}</p>
+            <p><strong>Ticket Type:</strong> {show.type}</p>
+            <p><strong>Time:</strong> {show.time}</p>
+        </div>
+        </div>
+
+        <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+            Quantity
+        </label>
+        <div className="flex items-center space-x-3">
+            <button
+            onClick={() => handleQuantityChange('decrement')}
+            disabled={quantity <= 1}
+            className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+            -
+            </button>
+            <span className="font-semibold text-lg w-8 text-center">{quantity}</span>
+            <button
+            onClick={() => handleQuantityChange('increment')}
+            disabled={quantity >= 10}
+            className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+            +
+            </button>
+        </div>
+        </div>
+
+        <div className="bg-blue-50 rounded-lg p-4">
+        <div className="flex justify-between items-center mb-2">
+            <span className="text-gray-700">Price per ticket:</span>
+            <span className="font-semibold">{show.price}</span>
+        </div>
+        <div className="flex justify-between items-center mb-2">
+            <span className="text-gray-700">Quantity:</span>
+            <span className="font-semibold">{quantity}</span>
+        </div>
+        <div className="border-t pt-2">
+            <div className="flex justify-between items-center">
+            <span className="text-lg font-bold text-gray-900">Total:</span>
+            <span className="text-lg font-bold text-blue-600">
+                Rs. {totalPrice.toLocaleString()}
+            </span>
+            </div>
+        </div>
+        </div>
+
+        <div className="space-y-4">
+        <h4 className="font-semibold text-gray-900">Customer Information</h4>
+        
+        <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+            Full Name *
+            </label>
+            <input
+            type="text"
+            value={customerInfo.name}
+            onChange={(e) => handleInputChange('name', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter your full name"
+            />
+        </div>
+
+        <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+            Email *
+            </label>
+            <input
+            type="email"
+            value={customerInfo.email}
+            onChange={(e) => handleInputChange('email', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter your email"
+            />
+        </div>
+
+        <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+            Phone Number *
+            </label>
+            <input
+            type="tel"
+            value={customerInfo.phone}
+            onChange={(e) => handleInputChange('phone', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter your phone number"
+            />
+        </div>
+
+        <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+            Address (Optional)
+            </label>
+            <textarea
+            value={customerInfo.address}
+            onChange={(e) => handleInputChange('address', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            rows="2"
+            placeholder="Enter your address"
+            />
+        </div>
+        </div>
+
+        <button
+        onClick={handlePurchase}
+        disabled={isProcessing}
+        className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center space-x-2"
+        >
+        {isProcessing ? (
+            <>
+            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+            <span>Processing...</span>
+            </>
+        ) : (
+            <span>Purchase Tickets</span>
+        )}
+        </button>
+
+        <p className="text-xs text-gray-500 text-center">
+        By purchasing tickets, you agree to our terms and conditions
+        </p>
+    </div>
+    </div>
+</div>
+);
+};
+
+const EventDetails = () => {
 const location = useLocation();
 const navigate = useNavigate();
 const event = location.state?.event;
 
-// For demo purposes, using sample data
-// const [event] = useState({
-// id: 1,
-// title: "INTERSTELLAR",
-// date: "Saturday, Jul 12 IST",
-// time: "8:00 PM",
-// location: "Ceynor Restaurant - Colombo",
-// price: "Rs. 2,500",
-// category: "Electronic",
-// status: "available",
-// image: "/api/placeholder/400/400",
-// description: "This isn't just a party—it's a journey. Welcome to INTERSTELLAR 2025, where you and your crew board a vessel bound for the stars. From the moment you arrive, you'll be swept into a universe of lights, sound, and energy unlike anything on Earth."
-// });
+// State for ticket purchase modal
+const [showPurchaseModal, setShowPurchaseModal] = useState(false);
+const [selectedShow, setSelectedShow] = useState(null);
 
-// Sample show times data
+// Sample show times data with proper pricing
 let showTimes = [];
 
 if (event?.category === 'Concert') {
-    showTimes = [
+showTimes = [
     { id: 1, type: 'Early Bird', time: '05.00 PM IST', status: 'sold-out', price: event?.earlyBirdPrice || 'Rs. 2,000' },
     { id: 2, type: 'Standard', time: '05.00 PM IST', status: 'available', price: event?.standardPrice || 'Rs. 2,500' },
     { id: 3, type: 'VIP', time: '05.00 PM IST', status: 'available', price: event?.vipPrice || 'Rs. 3,000' }
-    ];
+];
 } else if (event?.category === 'DJ') {
-    showTimes = [
+showTimes = [
     { id: 1, type: 'Phase 01', time: '05.00 PM IST', status: 'sold-out', price: event?.phase1Price || 'Rs. 2,000' },
     { id: 2, type: 'Phase 02', time: '05.00 PM IST', status: 'available', price: event?.phase2Price || 'Rs. 2,500' },
     { id: 3, type: 'Phase 03', time: '05.00 PM IST', status: 'available', price: event?.phase3Price || 'Rs. 3,000' }
-    ];
+];
+} else {
+// Default ticket types for other events
+showTimes = [
+    { id: 1, type: 'General Admission', time: '05.00 PM IST', status: 'available', price: event?.price || 'Rs. 2,500' },
+    { id: 2, type: 'Premium', time: '05.00 PM IST', status: 'available', price: 'Rs. 3,500' },
+    { id: 3, type: 'VIP', time: '05.00 PM IST', status: 'available', price: 'Rs. 5,000' }
+];
 }
-
 
 const getButtonStyle = (status) => {
 switch (status) {
@@ -63,27 +266,32 @@ switch (status) {
 };
 
 const handleBackClick = () => {
-// In your actual project, use this to navigate back:
 navigate(-1);
-
 };
+
 useEffect(() => {
-    if (!event) {
-        navigate('/');
-    }
+if (!event) {
+    navigate('/');
+}
 }, [event, navigate]);
 
 const handleBuyTickets = (show) => {
 if (show.status === 'available') {
-    console.log('Buy tickets for:', show);
-    alert(`Buy tickets for ${show.phase} at ${show.time}`);
+    setSelectedShow(show);
+    setShowPurchaseModal(true);
 }
 };
 
+const handlePurchaseComplete = (purchaseData) => {
+console.log('Purchase completed:', purchaseData);
+// Here you would typically:
+// 1. Send the purchase data to your backend
+// 2. Update the ticket availability
+// 3. Show success message
+// 4. Redirect to confirmation page
+};
 
 // If no event data is found, show error message
-// In your actual project, check: if (!event) return <div>Event not found</div>;
-
 if (!event) {
 return (
     <div className="min-h-screen bg-white flex items-center justify-center">
@@ -142,9 +350,6 @@ return (
             
             <div className="space-y-4 text-gray-600">
             <p>
-                <strong>{event.title} 2025</strong> – A Night to Leave Earth Behind
-            </p>
-            <p>
                 {event.description}
             </p>
             <p>
@@ -168,25 +373,43 @@ return (
             </div>
         </div>
 
-        {/* Show Times */}
+        {/* Available Tickets */}
         <div>
-            <h3 className="text-xl font-semibold mb-4">Time</h3>
+            <h3 className="text-xl font-semibold mb-4">Available Tickets</h3>
             <div className="space-y-4">
             {showTimes.map((show) => (
-                <div key={show.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div className="font-semibold text-md">
-                        {show.type}
+                <div key={show.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                    <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-semibold text-lg text-gray-900">{show.type}</h4>
+                        <span className="text-xl font-bold text-blue-600">{show.price}</span>
                     </div>
-                <div>
-                    <h4 className="font-semibold text-lg">{show.phase} @ {show.time}</h4>
-                </div>
-                <button
-                    className={`px-6 py-2 rounded-lg font-semibold transition-all duration-200 ${getButtonStyle(show.status)}`}
+                    <div className="flex items-center space-x-4 text-sm text-gray-600">
+                        <div className="flex items-center space-x-1">
+                        <Clock className="w-4 h-4" />
+                        <span>{show.time}</span>
+                        </div>
+                        {show.status === 'available' && (
+                        <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                            Available
+                        </span>
+                        )}
+                        {show.status === 'sold-out' && (
+                        <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium">
+                            Sold Out
+                        </span>
+                        )}
+                    </div>
+                    </div>
+                    <button
+                    className={`ml-4 px-6 py-2 rounded-lg font-semibold transition-all duration-200 ${getButtonStyle(show.status)}`}
                     disabled={show.status === 'sold-out'}
                     onClick={() => handleBuyTickets(show)}
-                >
+                    >
                     {getButtonText(show.status)}
-                </button>
+                    </button>
+                </div>
                 </div>
             ))}
             </div>
@@ -223,6 +446,16 @@ return (
         </div>
     </div>
     </div>
+
+    {/* Ticket Purchase Modal */}
+    {showPurchaseModal && selectedShow && (
+    <TicketPurchase
+        show={selectedShow}
+        event={event}
+        onClose={() => setShowPurchaseModal(false)}
+        onPurchase={handlePurchaseComplete}
+    />
+    )}
 </div>
 );
 };
