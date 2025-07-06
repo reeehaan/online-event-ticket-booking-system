@@ -24,6 +24,7 @@ import OrganizerLandingPage from './pages/Organizer/OrgLandingPage';
 import OrganizerProfile from './pages/Organizer/OrganizerProfile';
 import CreateEvent from './pages/Organizer/CreateEvent';
 import ManageEvents from './pages/Organizer/ManageEvents';
+import TicketPurchase from './Components/EventPages/TicketPurchase';
 
 function App() {
   return (
@@ -64,6 +65,12 @@ function App() {
           <Route path="/event-details" element={
             <ProtectedRoute allowedUserType="attendee">
               <EventDetails />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/ticket-purchase" element={
+            <ProtectedRoute allowedUserType="attendee">
+              <TicketPurchase />
             </ProtectedRoute>
           } />
 
