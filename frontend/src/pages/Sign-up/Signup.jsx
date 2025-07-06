@@ -19,24 +19,27 @@ Camera
 
 import  axios  from 'axios';
 import { useNavigate } from "react-router-dom";
+import { ToastContainer, toast } from 'react-toastify';
 
 function SignupForm() {
 const [currentStep, setCurrentStep] = useState('userType'); // 'userType', 'attendeeForm', 'organizerForm'
 const [selectedUserType, setSelectedUserType] = useState('');
 const [showPassword, setShowPassword] = useState(false);
 const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+const [isLoading, setIsLoading] = useState(false);
+
 const navigate = useNavigate();
 
 const [attendeeForm, setAttendeeForm] = useState({
-email: "",
-password: "",
-confirmPassword: "",
-phone: "",
-firstName: "",
-lastName: "",
-dateOfBirth: "",
-interests: [],
-location: ""
+email: "rrr@gmail.com",
+password: "12345678",
+confirmPassword: "12345678",
+phone: "293884244",
+firstName: "rwehen",
+lastName: "jsjasdjkaf",
+dateOfBirth: "2002-02-01",
+interests: ['Sports'],
+location: "isodisjosjd"
 });
 
 const [organizerForm, setOrganizerForm] = useState({
@@ -169,6 +172,7 @@ return Object.keys(newErrors).length === 0;
 
 //registration function 
 const handleRegistration = async (formData, userType) => {
+setIsLoading(true);
 try {
     const response = await axios.post('http://localhost:3000/api/user/register', {
     ...formData,
@@ -176,10 +180,10 @@ try {
     });
     
     if (response.status === 200 || response.status === 201) {
-        toast.success(`${userType} registration successful! Redirecting to login...`);
+    toast.success(`${userType} registration successful! Redirecting to login...`);
     
     setTimeout(() => {
-        navigate('/login');
+        //navigate('/login');
     }, 2000);
     }
     
@@ -193,6 +197,8 @@ try {
     } else {
     toast.error('Registration failed. Please try again.');
     }
+} finally {
+    setIsLoading(false);
 }
 };
 const handleAttendeeSubmit = async (e) => {
@@ -534,6 +540,7 @@ return (
         </form>
         </div>
     </div>
+    <ToastContainer position="bottom-center" autoClose={2000} />
     </div>
 );
 }
@@ -840,7 +847,9 @@ return (
         </form>
         </div>
     </div>
+    <ToastContainer position="bottom-center" autoClose={2000} />
     </div>
+
 );
 }
 
