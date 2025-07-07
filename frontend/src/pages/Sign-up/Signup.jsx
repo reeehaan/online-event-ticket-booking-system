@@ -183,7 +183,7 @@ try {
     toast.success(`${userType} registration successful! Redirecting to login...`);
     
     setTimeout(() => {
-        //navigate('/login');
+        navigate('/login');
     }, 2000);
     }
     

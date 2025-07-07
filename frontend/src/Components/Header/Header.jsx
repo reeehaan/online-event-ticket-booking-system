@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import {logoutUser} from '../../utils/authUtils';
 
-const Header = ({ userType = 'guest' }) => { 
+const Header = ({ userType  = 'guest'}) => { 
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [hoveredItem, setHoveredItem] = useState(null);
     const [isScrolled, setIsScrolled] = useState(false);
@@ -232,6 +232,17 @@ const Header = ({ userType = 'guest' }) => {
         navigate('/');
     };
 
+    function handleHomeClick(userType){
+        
+        if(userType === "attendee"){
+            navigate('/');
+        }else if (userType === "organizer"){
+            navigate('/organizer-dashboard')
+        }else{
+            navigate('/')
+        }
+    }
+
     return (
         <header className={`fixed top-0 left-0 right-0 z-[999] transition-all duration-500 ${
             isScrolled 
@@ -245,7 +256,10 @@ const Header = ({ userType = 'guest' }) => {
                     {/* Logo */}
                     <div className="flex-shrink-0 group">
                         <div className="flex items-center">
-                            <a href="/" className={`text-lg sm:text-xl lg:text-2xl font-bold transition-colors duration-300 ${isScrolled ? 'text-gray-900' : 'text-white'}`}>
+                            <a 
+                            href="" 
+                            onClick={handleHomeClick}
+                            className={`text-lg sm:text-xl lg:text-2xl font-bold transition-colors duration-300 ${isScrolled ? 'text-gray-900' : 'text-white'}`}>
                                 IslandEntry
                             </a>
                             <span className={`text-xs ml-1 align-top transition-colors duration-300 ${isScrolled ? 'text-gray-500' : 'text-white/80'}`}>LK</span>
