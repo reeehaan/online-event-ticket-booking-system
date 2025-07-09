@@ -22,9 +22,11 @@ import UserLandingPage from './pages/User/UserLandingPage';
 
 import OrganizerLandingPage from './pages/Organizer/OrgLandingPage';
 import OrganizerProfile from './pages/Organizer/OrganizerProfile';
-import CreateEvent from './pages/Organizer/CreateEvent';
 import ManageEvents from './pages/Organizer/ManageEvents';
 import TicketPurchase from './Components/EventPages/TicketPurchase';
+import EventDetailsForm from './pages/Organizer/EventDetailsForm';
+import CreateEventFlow from './pages/Organizer/CreateEventFlow';
+import TicketCreationForm from './pages/Organizer/TicketCreationForm';
 
 function App() {
   return (
@@ -101,9 +103,10 @@ function App() {
 
           <Route path="/organizer-create-event" element={
             <ProtectedRoute allowedUserType="organizer">
-              <CreateEvent />
+              <CreateEventFlow/>
             </ProtectedRoute>
           } />
+
 
           <Route path="/organizer-manage-events" element={
             <ProtectedRoute allowedUserType="organizer">
