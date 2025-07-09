@@ -1,4 +1,5 @@
 const Event = require('../Models/Event');
+const Ticket = require('../Models/Ticket');
 
 const createEvent = async (req, res) => {
     try {
@@ -11,7 +12,8 @@ const createEvent = async (req, res) => {
             time,
             venue,
             image,
-            maxAttendee
+            maxAttendee,
+            tickets // Array of ticket objects
         } = req.body;
 
         // Validate required fields
@@ -60,6 +62,91 @@ const createEvent = async (req, res) => {
             });
         }
 
+        // Validate tickets array
+        if (!tickets || !Array.isArray(tickets) || tickets.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'At least one ticket type is required'
+            });
+        }
+
+        if (tickets.length > 5) {
+            return res.status(400).json({
+                success: false,
+                message: 'Maximum 5 ticket types allowed per event'
+            });
+        }
+
+        // Validate each ticket
+        for (let i = 0; i < tickets.length; i++) {
+            const ticket = tickets[i];
+            
+            if (!ticket.name || !ticket.price || !ticket.quantity) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Ticket ${i + 1}: Missing required fields (name, price, quantity)`
+                });
+            }
+
+            if (ticket.price < 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Ticket ${i + 1}: Price must be 0 or greater`
+                });
+            }
+
+            if (ticket.quantity <= 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Ticket ${i + 1}: Quantity must be greater than 0`
+                });
+            }
+
+            if (ticket.maxPerPurchase && ticket.maxPerPurchase <= 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Ticket ${i + 1}: Max per purchase must be greater than 0`
+                });
+            }
+
+            // Validate sale dates if provided
+            if (ticket.saleStartDate) {
+                const saleStartDate = new Date(ticket.saleStartDate);
+                if (saleStartDate < currentDate) {
+                    return res.status(400).json({
+                        success: false,
+                        message: `Ticket ${i + 1}: Sale start date must be in the future`
+                    });
+                }
+            }
+
+            if (ticket.saleEndDate) {
+                const saleEndDate = new Date(ticket.saleEndDate);
+                if (saleEndDate < currentDate) {
+                    return res.status(400).json({
+                        success: false,
+                        message: `Ticket ${i + 1}: Sale end date must be in the future`
+                    });
+                }
+                
+                if (ticket.saleStartDate && new Date(ticket.saleEndDate) <= new Date(ticket.saleStartDate)) {
+                    return res.status(400).json({
+                        success: false,
+                        message: `Ticket ${i + 1}: Sale end date must be after sale start date`
+                    });
+                }
+            }
+        }
+
+        // Validate total ticket quantity doesn't exceed maxAttendee
+        const totalTicketQuantity = tickets.reduce((sum, ticket) => sum + ticket.quantity, 0);
+        if (totalTicketQuantity > maxAttendee) {
+            return res.status(400).json({
+                success: false,
+                message: `Total ticket quantity (${totalTicketQuantity}) cannot exceed maximum attendees (${maxAttendee})`
+            });
+        }
+
         // Create new event
         const newEvent = new Event({
             title: title.trim(),
@@ -76,17 +163,39 @@ const createEvent = async (req, res) => {
         });
 
         // Save event to database
-        await newEvent.save();
+        const savedEvent = await newEvent.save();
+
+        // Create tickets for the event
+        const ticketPromises = tickets.map(ticketData => {
+            const newTicket = new Ticket({
+                name: ticketData.name.trim(),
+                description: ticketData.description ? ticketData.description.trim() : undefined,
+                price: ticketData.price,
+                currency: ticketData.currency || 'LKR',
+                quantity: ticketData.quantity,
+                eventId: savedEvent._id,
+                saleStartDate: ticketData.saleStartDate ? new Date(ticketData.saleStartDate) : undefined,
+                saleEndDate: ticketData.saleEndDate ? new Date(ticketData.saleEndDate) : undefined,
+                status: ticketData.status || 'active',
+                maxPerPurchase: ticketData.maxPerPurchase || 10
+            });
+            
+            return newTicket.save();
+        });
+
+        // Save all tickets
+        const savedTickets = await Promise.all(ticketPromises);
 
         // Populate organizer details for response
-        await newEvent.populate('createdBy', 'firstName lastName email organizationName organizationType');
+        await savedEvent.populate('createdBy', 'firstName lastName email organizationName organizationType');
 
         // Return success response
         res.status(201).json({
             success: true,
-            message: 'Event created successfully',
+            message: 'Event and tickets created successfully',
             data: {
-                event: newEvent
+                event: savedEvent,
+                tickets: savedTickets
             }
         });
 
@@ -103,6 +212,15 @@ const createEvent = async (req, res) => {
             });
         }
 
+        // Handle duplicate key errors
+        if (error.code === 11000) {
+            return res.status(400).json({
+                success: false,
+                message: 'Duplicate entry detected',
+                error: error.message
+            });
+        }
+        //error starts in here 
         res.status(500).json({
             success: false,
             message: 'Internal server error while creating event'
@@ -133,7 +251,130 @@ const getMyEvents = async (req, res) => {
         });
     }
 };
+
+//only by the organizer
+const updateEvent = async (req, res) => {
+    try {
+        const { eventId } = req.params;
+        const updates = req.body;
+
+        // Find event
+        const event = await Event.findById(eventId);
+
+        if (!event) {
+            return res.status(404).json({
+                success: false,
+                message: 'Event not found'
+            });
+        }
+
+        // Check if user is the creator
+        if (event.createdBy.toString() !== req.user._id.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: 'You can only update your own events'
+            });
+        }
+
+        // Validate date if being updated
+        if (updates.date) {
+            const eventDate = new Date(updates.date);
+            const currentDate = new Date();
+            currentDate.setHours(0, 0, 0, 0);
+            
+            if (eventDate < currentDate) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Event date must be in the future'
+                });
+            }
+        }
+
+        // Validate time format if being updated
+        if (updates.time) {
+            const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+            if (!timeRegex.test(updates.time)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid time format. Use HH:MM format (e.g., 14:30)'
+                });
+            }
+        }
+
+        // Update event
+        const updatedEvent = await Event.findByIdAndUpdate(
+            eventId,
+            { ...updates, updatedAt: new Date() },
+            { new: true, runValidators: true }
+        ).populate('createdBy', 'firstName lastName organizationName organizationType');
+
+        res.json({
+            success: true,
+            message: 'Event updated successfully',
+            data: {
+                event: updatedEvent
+            }
+        });
+
+    } catch (error) {
+        console.error('Update event error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error while updating event'
+        });
+    }
+};
+
+// Delete event only by the organizer
+const deleteEvent = async (req, res) => {
+    try {
+        const { eventId } = req.params;
+
+        // Optional: validate ObjectId
+        // if (!mongoose.Types.ObjectId.isValid(eventId)) {
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: 'Invalid event ID'
+        //     });
+        // }
+
+        // Find event
+        const event = await Event.findById(eventId);
+
+        if (!event) {
+            return res.status(404).json({
+                success: false,
+                message: 'Event not found'
+            });
+        }
+
+        // Check if user is the creator
+        if (event.createdBy.toString() !== req.user._id.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: 'You can only delete your own events'
+            });
+        }
+
+        // Delete event
+        await Event.findByIdAndDelete(eventId);
+
+        return res.status(200).json({
+            success: true,
+            message: 'Event deleted successfully'
+        });
+
+    } catch (error) {
+        console.error('Delete event error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error while deleting event'
+        });
+    }
+};
 module.exports = {
     createEvent,
-    getMyEvents
+    getMyEvents,
+    updateEvent,
+    deleteEvent
 };
