@@ -7,7 +7,6 @@ const register = async (req, res) => {
 try {
     const { userType } = req.body;
 
-    // Validate userType
     if (!userType || !['attendee', 'organizer'].includes(userType)) {
     return res.status(400).json({
         success: false,
@@ -15,7 +14,6 @@ try {
     });
     }
 
-    // Check if user already exists
     const existingUser = await User.findOne({ email: req.body.email.toLowerCase() });
     if (existingUser) {
     return res.status(400).json({
@@ -31,7 +29,7 @@ try {
     let newUser;
 
     if (userType === 'attendee') {
-    // Validate attendee-specific fields
+        
     const { firstName, lastName, email, phone, dateOfBirth, location, interests } = req.body;
     
     if (!firstName || !lastName || !email || !phone || !dateOfBirth || !location) {

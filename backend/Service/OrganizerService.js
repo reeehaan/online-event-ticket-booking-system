@@ -13,10 +13,10 @@ const createEvent = async (req, res) => {
             venue,
             image,
             maxAttendee,
-            tickets // Array of ticket objects
+            tickets 
         } = req.body;
 
-        // Validate required fields
+        
         if (!title || !description || !category || !subcategory || !date || !time || !venue || !maxAttendee) {
             return res.status(400).json({
                 success: false,
@@ -25,7 +25,7 @@ const createEvent = async (req, res) => {
             });
         }
 
-        // Validate category
+        
         if (!['Event', 'Theater'].includes(category)) {
             return res.status(400).json({
                 success: false,
@@ -33,7 +33,7 @@ const createEvent = async (req, res) => {
             });
         }
 
-        // Validate date (must be in the future)
+        
         const eventDate = new Date(date);
         const currentDate = new Date();
         currentDate.setHours(0, 0, 0, 0); // Set to start of day for comparison
@@ -45,7 +45,7 @@ const createEvent = async (req, res) => {
             });
         }
 
-        // Validate time format (HH:MM)
+        
         const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
         if (!timeRegex.test(time)) {
             return res.status(400).json({
@@ -54,7 +54,7 @@ const createEvent = async (req, res) => {
             });
         }
 
-        // Validate maxAttendee
+        
         if (maxAttendee <= 0) {
             return res.status(400).json({
                 success: false,
@@ -62,7 +62,7 @@ const createEvent = async (req, res) => {
             });
         }
 
-        // Validate tickets array
+        
         if (!tickets || !Array.isArray(tickets) || tickets.length === 0) {
             return res.status(400).json({
                 success: false,
@@ -77,7 +77,7 @@ const createEvent = async (req, res) => {
             });
         }
 
-        // Validate each ticket
+        
         for (let i = 0; i < tickets.length; i++) {
             const ticket = tickets[i];
             
@@ -109,7 +109,7 @@ const createEvent = async (req, res) => {
                 });
             }
 
-            // Validate sale dates if provided
+            
             if (ticket.saleStartDate) {
                 const saleStartDate = new Date(ticket.saleStartDate);
                 if (saleStartDate < currentDate) {
@@ -138,7 +138,7 @@ const createEvent = async (req, res) => {
             }
         }
 
-        // Validate total ticket quantity doesn't exceed maxAttendee
+        
         const totalTicketQuantity = tickets.reduce((sum, ticket) => sum + ticket.quantity, 0);
         if (totalTicketQuantity > maxAttendee) {
             return res.status(400).json({
@@ -212,7 +212,7 @@ const createEvent = async (req, res) => {
             });
         }
 
-        // Handle duplicate key errors
+        
         if (error.code === 11000) {
             return res.status(400).json({
                 success: false,
@@ -220,7 +220,7 @@ const createEvent = async (req, res) => {
                 error: error.message
             });
         }
-        //error starts in here 
+        
         res.status(500).json({
             success: false,
             message: 'Internal server error while creating event'
@@ -228,18 +228,30 @@ const createEvent = async (req, res) => {
     }
 };
 
-// Get events created by the authenticated organizer
+// Get events created by the organizer
 const getMyEvents = async (req, res) => {
     try {
+        
         const events = await Event.find({ createdBy: req.user._id })
-            .sort({ date: 1, time: 1 });
+            .sort({ createdAt: -1,date: 1, time: 1 });
+
+        
+        const eventsWithTickets = await Promise.all(
+            events.map(async (event) => {
+                const tickets = await Ticket.find({ eventId: event._id });
+                return {
+                    ...event.toObject(),
+                    tickets
+                };
+            })
+        );
 
         res.json({
             success: true,
             message: 'Your events retrieved successfully',
             data: {
-                events,
-                count: events.length
+                events: eventsWithTickets,
+                count: eventsWithTickets.length
             }
         });
 
@@ -330,15 +342,15 @@ const deleteEvent = async (req, res) => {
     try {
         const { eventId } = req.params;
 
-        // Optional: validate ObjectId
-        // if (!mongoose.Types.ObjectId.isValid(eventId)) {
-        //     return res.status(400).json({
-        //         success: false,
-        //         message: 'Invalid event ID'
-        //     });
-        // }
+        
+        if (!mongoose.Types.ObjectId.isValid(eventId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid event ID'
+            });
+        }
 
-        // Find event
+        
         const event = await Event.findById(eventId);
 
         if (!event) {
@@ -348,7 +360,7 @@ const deleteEvent = async (req, res) => {
             });
         }
 
-        // Check if user is the creator
+        
         if (event.createdBy.toString() !== req.user._id.toString()) {
             return res.status(403).json({
                 success: false,
@@ -356,7 +368,7 @@ const deleteEvent = async (req, res) => {
             });
         }
 
-        // Delete event
+        
         await Event.findByIdAndDelete(eventId);
 
         return res.status(200).json({
