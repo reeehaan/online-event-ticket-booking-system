@@ -19,23 +19,23 @@ import EventDetails from "./Components/EventPages/EventDetails";
 import UserProfile from './pages/User/UserProfile';
 import BookingHistory from './pages/User/BookingHistory';
 import UserLandingPage from './pages/User/UserLandingPage';
+import TicketPurchase from './Components/EventPages/TicketPurchase';
 
 import OrganizerLandingPage from './pages/Organizer/OrgLandingPage';
 import OrganizerProfile from './pages/Organizer/OrganizerProfile';
 import ManageEvents from './pages/Organizer/ManageEvents';
-import TicketPurchase from './Components/EventPages/TicketPurchase';
-import EventDetailsForm from './pages/Organizer/EventDetailsForm';
 import CreateEventFlow from './pages/Organizer/CreateEventFlow';
-import TicketCreationForm from './pages/Organizer/TicketCreationForm';
+import MyEvents from './pages/Organizer/MyEvents';
+
 
 function App() {
   return (
     <Router>
       <Routes>
-        {/* Layout wrapper with dynamic user type detection */}
+        
         <Route element={<DynamicLayout />}>
           
-          {/* Guest Routes - Only accessible when not logged in */}
+          
           <Route path="/sign-up" element={
             <GuestRoute>
               <SignupForm />
@@ -54,7 +54,7 @@ function App() {
             </GuestRoute>
           } />
 
-          {/* Public Landing Page - accessible to guests and attendees */}
+          
           <Route path="/" element={<UserLandingPage />} />
 
           {/* Protected Attendee Routes */}
@@ -64,7 +64,7 @@ function App() {
             </ProtectedRoute>
           } />
 
-          <Route path="/event-details" element={
+          <Route path="/event-details/:eventId" element={
             <ProtectedRoute allowedUserType="attendee">
               <EventDetails />
             </ProtectedRoute>
@@ -111,6 +111,12 @@ function App() {
           <Route path="/organizer-manage-events" element={
             <ProtectedRoute allowedUserType="organizer">
               <ManageEvents />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/organizer-my-events" element={
+            <ProtectedRoute allowedUserType="organizer">
+              <MyEvents/>
             </ProtectedRoute>
           } />
 
