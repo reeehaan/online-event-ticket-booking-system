@@ -139,24 +139,24 @@ setIsSubmitting(false);
 
 return (
 <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-50 py-8">
-{currentStep === 1 ? (
-<EventDetailsForm
-eventData={eventData}
-setEventData={setEventData}
-onNext={handleNext}
-/>
-) : (
-<TicketCreationForm
-eventData={eventData}
-tickets={tickets}
-setTickets={setTickets}
-onBack={handleBack}
-onSubmit={handleSubmit}
-isSubmitting={isSubmitting}
-/>
-)}
-</div>
-);
+    {currentStep === 1 ? (
+    <EventDetailsForm
+        eventData={eventData}
+        setEventData={setEventData}
+        onNext={handleNext}
+    />
+    ) : (
+    <TicketCreationForm
+        eventData={eventData}
+        tickets={tickets}
+        setTickets={setTickets}
+        onBack={handleBack}
+        onSubmit={handleSubmit}
+        isSubmitting={isSubmitting}
+    />
+    )}
+    </div>
+    );
 };
 
 export default CreateEventFlow;
