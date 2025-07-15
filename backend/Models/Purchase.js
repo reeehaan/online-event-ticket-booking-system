@@ -13,26 +13,23 @@ const purchaseSchema = new mongoose.Schema({
         ref: 'Event',
         required: true
     },
-    // Array of purchased tickets
-    ticketId: [{
-        ticket: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Ticket',
-            required: true
-        },
-        quantity: {
-            type: Number,
-            required: true,
-            min: 1
-        },
-        priceAtPurchase: {
-            type: Number,
-            required: true,
-            min: 0
-            // Store the price at time of purchase (in case prices change)
-        }
-    }],
+    // Reference to the specific ticket type
+    ticketId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Ticket',
+        required: true
+    },
     // Purchase details
+    quantity: {
+        type: Number,
+        required: true,
+        min: 1
+    },
+    pricePerTicket: {
+        type: Number,
+        required: true,
+        min: 0
+    },
     totalAmount: {
         type: Number,
         required: true,
@@ -46,20 +43,23 @@ const purchaseSchema = new mongoose.Schema({
     },
     paymentMethod: {
         type: String,
-        enum: ['credit_card', 'debit_card', 'paypal', 'stripe', 'bank_transfer', 'cash'],
-        required: false
+        enum: ['payhere', 'credit_card', 'debit_card', 'bank_transfer'],
+        default: 'payhere'
     },
     paymentTransactionId: {
         type: String,
         required: false
-        // Store payment gateway transaction ID
+    },
+    paymentOrderId: {
+        type: String,
+        required: false
     },
     // Purchase metadata
     purchaseDate: {
         type: Date,
         default: Date.now
     },
-    // Optional: Buyer information (in case user account is deleted)
+    // Buyer information
     userInfo: {
         name: {
             type: String,
@@ -71,6 +71,10 @@ const purchaseSchema = new mongoose.Schema({
         },
         phone: {
             type: String,
+            required: true
+        },
+        address: {
+            type: String,
             required: false
         }
     },
@@ -80,15 +84,32 @@ const purchaseSchema = new mongoose.Schema({
         enum: ['active', 'cancelled', 'refunded', 'used'],
         default: 'active'
     },
-    // Optional: QR code or ticket reference for entry
+    // QR code data for ticket validation
+    qrCode: {
+        type: String,
+        required: false
+    },
+    // Unique ticket reference
     ticketReference: {
         type: String,
         unique: true,
         required: false
-        // Generate unique reference for ticket validation
+    },
+    // Email sent status
+    emailSent: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true
+});
+
+// Generate unique ticket reference before saving
+purchaseSchema.pre('save', function(next) {
+    if (!this.ticketReference) {
+        this.ticketReference = 'TKT-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+    }
+    next();
 });
 
 const Purchase = mongoose.model('Purchase', purchaseSchema);
