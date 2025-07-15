@@ -3,301 +3,242 @@ import { Search, Calendar, MapPin, ChevronLeft, ChevronRight, ArrowRight, Loader
 import axios from 'axios';
 import { Navigate, useNavigate } from "react-router-dom";
 
-// Create axios instance with default config
-const apiClient = axios.create({
-baseURL: 'http://localhost:3000/api',
- // 10 seconds timeout
-});
-
-// Add request interceptor to include token in every request
-apiClient.interceptors.request.use(
-(config) => {
-const token = localStorage.getItem('authToken');
-if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-}
-return config;
-},
-(error) => {
-return Promise.reject(error);
-}
-);
-
-
-apiClient.interceptors.response.use(
-(response) => response,
-(error) => {
-if (error.response?.status === 401) {
-    
-    localStorage.removeItem('authToken');
-    window.location.href = '/login';
-}
-return Promise.reject(error);
-}
-);
-
 function UserLandingPage() {
-const [searchQuery, setSearchQuery] = useState("");
-const [activeMonth, setActiveMonth] = useState("This Month");
-const [activeCategory, setActiveCategory] = useState("All");
-const [events, setEvents] = useState([]);
-const [loading, setLoading] = useState(true);
-const [error, setError] = useState(null);
-const navigate = useNavigate();
-
+    const [searchQuery, setSearchQuery] = useState("");
+    const [activeMonth, setActiveMonth] = useState("This Month");
+    const [activeCategory, setActiveCategory] = useState("All");
+    const [events, setEvents] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const navigate = useNavigate();
 
 useEffect(() => {
-const fetchEvents = async () => {
-    try {
-    setLoading(true);
-    const response = await apiClient.get('/attendee/get-all-event');
-    
-    if (response.data.success) {
-        setEvents(response.data.data.events);
-    } else {
-        throw new Error(response.data.message || 'Failed to fetch events');
-    }
-    } catch (err) {
-    
-    if (err.response?.status === 401) {
-        setError('Please log in to view events');
-    } else {
-        setError(err.response?.data?.message || err.message || 'Failed to fetch events');
-    }
-    console.error('Error fetching events:', err);
-    } finally {
-    setLoading(false);
-    }
-};
+    const fetchEvents = async () => {
+        try {
+        setLoading(true);
+        
+        
+        const token = localStorage.getItem('authToken');
+        
+        
+        const response = await axios.get('http://localhost:3000/api/attendee/get-all-event', {
+            headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+            }
+        });
+        
+        if (response.data.success) {
+            setEvents(response.data.data.events);
+        } else {
+            throw new Error(response.data.message || 'Failed to fetch events');
+        }
+        } catch (err) {
+        console.error('Error fetching events:', err);
+        
+        
+        if (err.response?.status === 401) {
+            setError('Please log in to view events');
+            localStorage.removeItem('authToken');
+            window.location.href = '/login';
+        } else {
+            setError(err.response?.data?.message || err.message || 'Failed to fetch events');
+        }
+        } finally {
+        setLoading(false);
+        }
+    };
 
-fetchEvents();
+    fetchEvents();
 }, []);
 
-// Convert base64 to image URL
 const getImageUrl = (base64String) => {
-if (!base64String) return null;
-
-// Check if it's already a complete data URL
-if (base64String.startsWith('data:image/')) {
-    return base64String;
-}
-
-// Add data URL prefix if it's just base64 string
-return `data:image/jpeg;base64,${base64String}`;
+    if (!base64String) return null;
+    
+    if (base64String.startsWith('data:image/')) {
+        return base64String;
+    }
+    
+    return `data:image/jpeg;base64,${base64String}`;
 };
 
-// Format date for display
 const formatEventDate = (dateStr) => {
-const date = new Date(dateStr);
-return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: '2-digit',
-    year: 'numeric'
-});
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: '2-digit',
+        year: 'numeric'
+    });
 };
 
-// Format time for display
 const formatEventTime = (timeStr) => {
-if (!timeStr) return '';
+    if (!timeStr) return '';
 
-// If time is already formatted, return as is
-if (timeStr.includes('AM') || timeStr.includes('PM')) {
-    return timeStr;
-}
+    if (timeStr.includes('AM') || timeStr.includes('PM')) {
+        return timeStr;
+    }
 
-// Convert 24-hour format to 12-hour format
-const [hours, minutes] = timeStr.split(':');
-const hour = parseInt(hours);
-const ampm = hour >= 12 ? 'PM' : 'AM';
-const displayHour = hour % 12 || 12;
+    const [hours, minutes] = timeStr.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour % 12 || 12;
 
-return `${displayHour}:${minutes} ${ampm}`;
+    return `${displayHour}:${minutes} ${ampm}`;
 };
 
-// Get button style based on status
 const getButtonStyle = (status) => {
-switch (status) {
+    switch (status) {
     case 'sold-out':
-    return 'bg-red-100 text-red-600 cursor-not-allowed';
+        return 'bg-red-100 text-red-600 cursor-not-allowed';
     case 'coming-soon':
-    return 'bg-gray-100 text-gray-600 cursor-not-allowed';
+        return 'bg-gray-100 text-gray-600 cursor-not-allowed';
     case 'published':
     default:
-    return 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer';
-}
+        return 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer';
+    }
 };
 
 const getButtonText = (status) => {
-switch (status) {
+    switch (status) {
     case 'sold-out':
-    return 'Sold Out';
+        return 'Sold Out';
     case 'coming-soon':
-    return 'Coming Soon';
+        return 'Coming Soon';
     case 'published':
     default:
-    return 'Buy Tickets';
-}
+        return 'Buy Tickets';
+    }
 };
 
-// Handle event click
 const handleEventClick = (event) => {
     if (event.status === 'published') {
-        navigate(`/event-details/${event._id}`, { state: { event } });
-        console.log('Navigate to event details:', event);
+    navigate(`/event-details/${event._id}`, { state: { event } });
+    console.log('Navigate to event details:', event);
     }
 };
 
-// Filter events based on search query
 const searchFilteredEvents = useMemo(() => {
-if (!searchQuery.trim()) return events;
+    if (!searchQuery.trim()) return events;
 
-const query = searchQuery.toLowerCase();
-return events.filter(event => 
-    event.title?.toLowerCase().includes(query) ||
-    event.description?.toLowerCase().includes(query) ||
-    event.venue?.toLowerCase().includes(query) ||
-    event.category?.toLowerCase().includes(query) ||
-    event.createdBy?.organizationName?.toLowerCase().includes(query)
-);
+    const query = searchQuery.toLowerCase();
+    return events.filter(event => 
+        event.title?.toLowerCase().includes(query) ||
+        event.description?.toLowerCase().includes(query) ||
+        event.venue?.toLowerCase().includes(query) ||
+        event.category?.toLowerCase().includes(query) ||
+        event.createdBy?.organizationName?.toLowerCase().includes(query)
+    );
 }, [events, searchQuery]);
 
-// Filter events by month
 const filteredEvents = useMemo(() => {
-const today = new Date();
-const currentMonth = today.getMonth();
-const currentYear = today.getFullYear();
-const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
-const nextMonthYear = currentMonth === 11 ? currentYear + 1 : currentYear;
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+    const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
+    const nextMonthYear = currentMonth === 11 ? currentYear + 1 : currentYear;
 
-return searchFilteredEvents.filter(event => {
-    const eventDate = new Date(event.date);
+    return searchFilteredEvents.filter(event => {
+        const eventDate = new Date(event.date);
 
-    if (activeMonth === "This Month") {
-    return eventDate.getMonth() === currentMonth && eventDate.getFullYear() === currentYear;
-    } else if (activeMonth === "Next Month") {
-    return eventDate.getMonth() === nextMonth && eventDate.getFullYear() === nextMonthYear;
+        if (activeMonth === "This Month") {
+        return eventDate.getMonth() === currentMonth && eventDate.getFullYear() === currentYear;
+        } else if (activeMonth === "Next Month") {
+        return eventDate.getMonth() === nextMonth && eventDate.getFullYear() === nextMonthYear;
     }
-    return true;
-});
+        return true;
+    });
 }, [searchFilteredEvents, activeMonth]);
 
-
 const chillVibeEvents = useMemo(() => {
-const filteredByCategory = activeCategory === "All" 
-    ? searchFilteredEvents 
-    : searchFilteredEvents.filter(event => event.category === activeCategory);
+    const filteredByCategory = activeCategory === "All" 
+        ? searchFilteredEvents 
+        : searchFilteredEvents.filter(event => event.category === activeCategory);
 
-return filteredByCategory.slice(0, 8); 
+    return filteredByCategory.slice(0, 8); 
 }, [searchFilteredEvents, activeCategory]);
 
-// Get events with deals 
 const ticketDeals = useMemo(() => {
-return searchFilteredEvents.filter(event => 
+    return searchFilteredEvents.filter(event => 
     event.tickets && event.tickets.length > 1 
-).slice(0, 8);
+    ).slice(0, 8);
 }, [searchFilteredEvents]);
 
-// Event Card Component
 const EventCard = ({ event, showDiscount = false }) => {
-const imageUrl = getImageUrl(event.image);
-const eventDate = formatEventDate(event.date);
-const eventTime = formatEventTime(event.time);
+    const imageUrl = getImageUrl(event.image);
+    const eventDate = formatEventDate(event.date);
+    const eventTime = formatEventTime(event.time);
 
-// Get pricing information from tickets
-const getEventPrice = () => {
-    if (!event.tickets || event.tickets.length === 0) return "Free";
+    const getEventPrice = () => {
+        if (!event.tickets || event.tickets.length === 0) return "Free";
     
-    const prices = event.tickets.map(ticket => ticket.price).filter(price => price > 0);
-    if (prices.length === 0) return "Free";
+        const prices = event.tickets.map(ticket => ticket.price).filter(price => price > 0);
+        if (prices.length === 0) return "Free";
     
-    const minPrice = Math.min(...prices);
-    const maxPrice = Math.max(...prices);
-    const currency = event.tickets[0].currency || 'LKR';
+        const minPrice = Math.min(...prices);
+        const maxPrice = Math.max(...prices);
+        const currency = event.tickets[0].currency || 'LKR';
     
-    if (minPrice === maxPrice) {
-    return `${minPrice} ${currency}`;
+        if (minPrice === maxPrice) {
+        return `${minPrice} ${currency}`;
     }
     return `${minPrice} - ${maxPrice} ${currency}`;
-};
+    };
 
-// Get available ticket count
-// const getAvailableTickets = () => {
-//     if (!event.tickets || event.tickets.length === 0) return 0;
-//     return event.tickets.reduce((total, ticket) => total + ticket.quantity, 0);
-// };
+    const hasMultipleTicketTypes = event.tickets && event.tickets.length > 1;
 
-// Check if event has multiple ticket types
-const hasMultipleTicketTypes = event.tickets && event.tickets.length > 1;
-
-return (
+    return (
     <div
-    className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 group cursor-pointer h-full flex flex-col"
-    onClick={() => handleEventClick(event)}
+        className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 group cursor-pointer h-full flex flex-col"
+        onClick={() => handleEventClick(event)}
     >
-    {/* Event Image - Made Square */}
-    <div className="relative overflow-hidden aspect-square">
+        <div className="relative overflow-hidden aspect-square">
         {imageUrl ? (
-        <img
+            <img
             src={imageUrl}
             alt={event.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             onError={(e) => {
-            e.target.style.display = 'none';
-            e.target.nextSibling.style.display = 'flex';
+                e.target.style.display = 'none';
+                e.target.nextSibling.style.display = 'flex';
             }}
-        />
+            />
         ) : null}
         
-        {/* Fallback gradient background */}
         <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center" style={{ display: imageUrl ? 'none' : 'flex' }}>
-        <div className="text-white text-center">
+            <div className="text-white text-center">
             <div className="text-xl font-bold mb-2">{event.title?.split(' ')[0]}</div>
             <div className="text-sm opacity-90">Event Image</div>
-        </div>
+            </div>
         </div>
         
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
         
-        {/* Category badge */}
         <div className="absolute top-3 left-3 bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-medium">
-        {event.category}
+        {event.subcategory}
         </div>
         
-        {/* Deal badge */}
         {showDiscount && hasMultipleTicketTypes && (
         <div className="absolute top-3 right-3 bg-green-500 text-white text-xs px-2 py-1 rounded-full font-medium">
             Multiple Options
         </div>
         )}
-
-        {/* Ticket availability indicator */}
-        {/* {getAvailableTickets() > 0 && (
-        <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm text-gray-800 text-xs px-2 py-1 rounded-full font-medium flex items-center space-x-1">
-            <Ticket className="w-3 h-3" />
-            <span>{getAvailableTickets()} available</span>
-        </div>
-        )} */}
     </div>
 
-    {/* Event Details */}
     <div className="p-5 flex flex-col flex-1">
         <h3 className="text-lg font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors duration-200 line-clamp-2 min-h-[3.5rem]">
         {event.title}
         </h3>
 
-        {/* Date & Time */}
         <div className="flex items-center space-x-2 text-gray-600 mb-2">
         <Calendar className="w-4 h-4 flex-shrink-0" />
         <span className="text-sm">{eventDate} • {eventTime}</span>
         </div>
 
-        {/* Location */}
         <div className="flex items-start space-x-2 text-gray-600 mb-4">
         <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" />
         <span className="text-sm line-clamp-2">{event.venue}</span>
         </div>
 
-        {/* Price */}
         <div className="mb-4 mt-auto">
         <div className="flex items-center space-x-2 mb-1">
             <span className="text-xl font-bold text-blue-600">{getEventPrice()}</span>
@@ -307,7 +248,6 @@ return (
         )}
         </div>
 
-        {/* Action Button */}
         <button
         className={`w-full py-3 px-4 rounded-xl font-semibold transition-all duration-200 ${getButtonStyle(event.status)}`}
         disabled={event.status === 'sold-out' || event.status === 'coming-soon'}
@@ -323,7 +263,6 @@ return (
 );
 };
 
-// Loading state
 if (loading) {
 return (
     <div className="min-h-screen bg-white flex items-center justify-center">
@@ -335,7 +274,6 @@ return (
 );
 }
 
-// Error state
 if (error) {
 return (
     <div className="min-h-screen bg-white flex items-center justify-center">
