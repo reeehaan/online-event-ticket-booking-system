@@ -1,15 +1,36 @@
 import React, { useState } from 'react';
-import { Calendar, Clock, MapPin, Plus, ImagePlus, ArrowRight, Image, Users, Tag, FileText } from 'lucide-react';
+import {
+Calendar,
+Clock,
+MapPin,
+Plus,
+ImagePlus,
+ArrowRight,
+Image,
+Users,
+Tag,
+FileText
+} from 'lucide-react';
 
 const EventDetailsForm = ({ eventData, setEventData, onNext }) => {
 const [image, setImage] = useState(null);
 const [previewURL, setPreviewURL] = useState(null);
 const [errors, setErrors] = useState({});
 
+const subcategoryOptions = {
+Event: ['Concert', 'DJ', 'Festival', 'Electronic'],
+Theater: ['Drama', 'Comedy']
+};
+
 const handleChange = (e) => {
 const { name, value } = e.target;
-setEventData(prev => ({ ...prev, [name]: value }));
-// Clear error when user starts typing
+
+setEventData(prev => ({
+    ...prev,
+    [name]: value,
+    ...(name === 'category' && { subcategory: '' }) // Reset subcategory when category changes
+}));
+
 if (errors[name]) {
     setErrors(prev => ({ ...prev, [name]: '' }));
 }
@@ -34,9 +55,10 @@ if (!eventData.subcategory?.trim()) newErrors.subcategory = 'Subcategory is requ
 if (!eventData.date) newErrors.date = 'Date is required';
 if (!eventData.time) newErrors.time = 'Time is required';
 if (!eventData.venue?.trim()) newErrors.venue = 'Venue is required';
-if (!eventData.maxAttendee || eventData.maxAttendee <= 0) newErrors.maxAttendee = 'Max attendees must be greater than 0';
+if (!eventData.maxAttendee || eventData.maxAttendee <= 0)
+    newErrors.maxAttendee = 'Max attendees must be greater than 0';
 
-// Date validation
+// Date must be in the future
 if (eventData.date) {
     const eventDate = new Date(eventData.date);
     const today = new Date();
@@ -135,16 +157,25 @@ return (
             <Tag size={20} className="text-purple-600" />
             Subcategory
             </label>
-            <input
+            <select
             name="subcategory"
             value={eventData.subcategory || ''}
             onChange={handleChange}
+            disabled={!eventData.category}
             className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all ${
                 errors.subcategory ? 'border-red-500' : 'border-gray-300'
             }`}
-            placeholder="e.g., Music Festival, Drama"
-            />
-            {errors.subcategory && <p className="text-red-500 text-sm">{errors.subcategory}</p>}
+            >
+            <option value="">Select Subcategory</option>
+            {subcategoryOptions[eventData.category]?.map((sub, index) => (
+                <option key={index} value={sub}>
+                {sub}
+                </option>
+            ))}
+            </select>
+            {errors.subcategory && (
+            <p className="text-red-500 text-sm">{errors.subcategory}</p>
+            )}
         </div>
         </div>
 
@@ -214,11 +245,11 @@ return (
             name="maxAttendee"
             value={eventData.maxAttendee || ''}
             onChange={handleChange}
+            min="1"
             className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all ${
             errors.maxAttendee ? 'border-red-500' : 'border-gray-300'
             }`}
             placeholder="Enter maximum number of attendees"
-            min="1"
         />
         {errors.maxAttendee && <p className="text-red-500 text-sm">{errors.maxAttendee}</p>}
         </div>

@@ -1,375 +1,683 @@
 import React, { useEffect, useState } from 'react';
-import { Trash2, Pencil, Plus, X } from 'lucide-react';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { 
+Trash2, 
+Pencil, 
+Plus, 
+X, 
+Calendar, 
+Clock, 
+MapPin, 
+Users, 
+Tag, 
+Save,
+Eye,
+AlertCircle,
+Check,
+FileText,
+Ticket
+} from 'lucide-react';
+import axios from 'axios';
+
+
+
+
 
 function ManageEvents() {
 const [events, setEvents] = useState([]);
 const [loading, setLoading] = useState(true);
 const [editingEvent, setEditingEvent] = useState(null);
+const [editingTickets, setEditingTickets] = useState(null);
+const [error, setError] = useState(null);
+const [viewMode, setViewMode] = useState('list'); // 'list' or 'edit'
+const [notifications, setNotifications] = useState([]);
 
-const dummyEvents = [
-{
-    _id: '1',
-    title: 'Sunset Beach Party',
-    description: 'Join us for a magical evening with live music and the ocean breeze.',
-    date: '2025-07-20',
-    time: '18:00',
-    location: 'Mount Lavinia Beach',
-    category: 'Concert',
-    imageUrl: 'https://source.unsplash.com/400x300/?concert',
-    ticketTypes: [
-    { type: 'VIP', price: 5000, count: 0 },
-    { type: 'Regular', price: 2500, count: 100 },
-    ],
-    status: 'Coming Soon',
-},
-{
-    _id: '2',
-    title: 'Online Workshop',
-    description: 'A detailed online workshop on digital marketing strategies.',
-    date: '2025-07-25',
-    time: '10:00',
-    location: 'Zoom',
-    category: 'Workshop',
-    imageUrl: 'https://source.unsplash.com/400x300/?workshop',
-    ticketTypes: [{ type: 'General', price: 1500, count: 0 }],
-    status: 'Coming Soon',
-},
-];
-
-// Initialize with dummy data and update status if tickets sold out
-const fetchDummyEvents = () => {
-const updated = dummyEvents.map((event) => {
-    const totalTickets = event.ticketTypes.reduce(
-    (sum, t) => sum + parseInt(t.count),
-    0
-    );
-    return {
-    ...event,
-    status: totalTickets === 0 ? 'Sold Out' : event.status,
-    };
-});
+const showNotification = (message, type = 'success') => {
+const id = Date.now();
+setNotifications(prev => [...prev, { id, message, type }]);
 setTimeout(() => {
-    setEvents(updated);
-    setLoading(false);
-}, 1000);
+    setNotifications(prev => prev.filter(n => n.id !== id));
+}, 3000);
+};
+
+const fetchEvents = async () => {
+try {
+setLoading(true);
+const token = localStorage.getItem('authToken');
+
+const response = await axios.get('http://localhost:3000/api/org/get-my-events', {
+    headers: {
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json'
+    }
+});
+
+if (response.data.success) {
+    const eventsWithTickets = response.data.data.events.map(event => {
+    let imageUrl = null;
+    if (event.image) {
+        try {
+        if (event.image.startsWith('data:image/')) {
+            imageUrl = event.image;
+        } else {
+            imageUrl = `data:image/jpeg;base64,${event.image}`;
+        }
+        } catch (imageError) {
+        console.error('Error processing image for event:', event._id, imageError);
+        imageUrl = null;
+        }
+    }
+
+    return {
+        ...event,
+        image: imageUrl,
+        ticketTypes: event.tickets || []
+    };
+    });
+
+    setEvents(eventsWithTickets);
+} else {
+    throw new Error(response.data.message || 'Failed to fetch events');
+}
+} catch (err) {
+if (err.response?.status === 401) {
+    localStorage.removeItem('authToken');
+    window.location.href = '/login';
+} else {
+    setError(err.response?.data?.message || err.message || 'Failed to fetch events');
+}
+console.error('Error fetching events:', err);
+} finally {
+setLoading(false);
+}
 };
 
 useEffect(() => {
-fetchDummyEvents();
+fetchEvents();
 }, []);
 
-const handleDelete = (eventId) => {
-if (!window.confirm('Are you sure you want to delete this event?')) return;
-setEvents((prev) => prev.filter((e) => e._id !== eventId));
-toast.success('Event deleted');
+const handleDeleteEvent = (eventId) => {
+if (!window.confirm('Are you sure you want to delete this event? This action cannot be undone.')) return;
+setEvents(prev => prev.filter(e => e._id !== eventId));
+showNotification('Event deleted successfully');
 };
 
-const handleStatusUpdate = (id, newStatus) => {
-setEvents((prev) =>
-    prev.map((e) => (e._id === id ? { ...e, status: newStatus } : e))
+const handleEventStatusUpdate = (eventId, newStatus) => {
+setEvents(prev => 
+    prev.map(e => e._id === eventId ? { ...e, status: newStatus } : e)
 );
-toast.success('Status updated');
+showNotification(`Event status updated to ${newStatus}`);
 };
 
-// Handle edits on event fields
-const handleEditChange = (field, value) => {
-setEditingEvent((prev) => ({ ...prev, [field]: value }));
+const handleEditEvent = (event) => {
+setEditingEvent({ ...event });
+setViewMode('edit');
 };
 
-// Handle edits on ticket types
-const handleTicketChange = (index, field, value) => {
-const updatedTickets = [...editingEvent.ticketTypes];
-if (field === 'count' || field === 'price') {
-    // Ensure numbers
-    value = value === '' ? '' : Number(value);
+const handleSaveEvent = () => {
+if (!editingEvent.title?.trim()) {
+    showNotification('Event title is required', 'error');
+    return;
 }
-updatedTickets[index] = { ...updatedTickets[index], [field]: value };
-setEditingEvent((prev) => ({ ...prev, ticketTypes: updatedTickets }));
 
-// Auto update status if total tickets sold out
-const total = updatedTickets.reduce(
-    (sum, t) => sum + (t.count ? t.count : 0),
-    0
+setEvents(prev => 
+    prev.map(e => e._id === editingEvent._id ? editingEvent : e)
 );
-if (total === 0) {
-    setEditingEvent((prev) => ({ ...prev, status: 'Sold Out' }));
-} else if (prev.status === 'Sold Out') {
-    setEditingEvent((prev) => ({ ...prev, status: 'Coming Soon' }));
-}
+setEditingEvent(null);
+setViewMode('list');
+showNotification('Event updated successfully');
 };
 
-// Add a new ticket type
-const addTicketType = () => {
-setEditingEvent((prev) => ({
+const handleEventFieldChange = (field, value) => {
+setEditingEvent(prev => ({ ...prev, [field]: value }));
+};
+
+const handleManageTickets = (event) => {
+setEditingTickets({ ...event });
+};
+
+const handleTicketChange = (ticketId, field, value) => {
+setEditingTickets(prev => ({
     ...prev,
-    ticketTypes: [...prev.ticketTypes, { type: '', price: 0, count: 0 }],
+    ticketTypes: prev.ticketTypes.map(ticket => 
+    ticket._id === ticketId ? { ...ticket, [field]: value } : ticket
+    )
 }));
 };
 
-// Remove a ticket type
-const removeTicketType = (index) => {
-const updatedTickets = [...editingEvent.ticketTypes];
-updatedTickets.splice(index, 1);
-setEditingEvent((prev) => ({ ...prev, ticketTypes: updatedTickets }));
+const handleAddTicket = () => {
+const newTicket = {
+    _id: 'new_' + Date.now(),
+    name: '',
+    description: '',
+    price: 0,
+    quantity: 0,
+    sold: 0,
+    maxPerPurchase: 1,
+    status: 'active'
+};
 
-// Recalculate status if needed
-const total = updatedTickets.reduce(
-    (sum, t) => sum + (t.count ? t.count : 0),
-    0
+setEditingTickets(prev => ({
+    ...prev,
+    ticketTypes: [...prev.ticketTypes, newTicket]
+}));
+};
+
+const handleRemoveTicket = (ticketId) => {
+if (editingTickets.ticketTypes.length === 1) {
+    showNotification('Cannot remove the last ticket type', 'error');
+    return;
+}
+
+setEditingTickets(prev => ({
+    ...prev,
+    ticketTypes: prev.ticketTypes.filter(t => t._id !== ticketId)
+}));
+};
+
+const handleSaveTickets = () => {
+// Validation
+const hasInvalidTickets = editingTickets.ticketTypes.some(ticket => 
+    !ticket.name.trim() || ticket.price < 0 || ticket.quantity < 0
 );
-if (total === 0) {
-    setEditingEvent((prev) => ({ ...prev, status: 'Sold Out' }));
+
+if (hasInvalidTickets) {
+    showNotification('Please fill all required fields with valid values', 'error');
+    return;
+}
+
+const totalTickets = editingTickets.ticketTypes.reduce((sum, ticket) => 
+    sum + parseInt(ticket.quantity) + parseInt(ticket.sold), 0
+);
+
+if (totalTickets > editingTickets.maxAttendee) {
+    showNotification(`Total tickets (${totalTickets}) cannot exceed max attendees (${editingTickets.maxAttendee})`, 'error');
+    return;
+}
+
+setEvents(prev => 
+    prev.map(e => e._id === editingTickets._id ? editingTickets : e)
+);
+setEditingTickets(null);
+showNotification('Tickets updated successfully');
+};
+
+const handleTicketStatusToggle = (ticketId) => {
+setEditingTickets(prev => ({
+    ...prev,
+    ticketTypes: prev.ticketTypes.map(ticket => 
+    ticket._id === ticketId 
+        ? { ...ticket, status: ticket.status === 'active' ? 'inactive' : 'active' }
+        : ticket
+    )
+}));
+};
+
+const getEventStatusColor = (status) => {
+switch (status) {
+    case 'Active': return 'bg-green-100 text-green-800';
+    case 'Draft': return 'bg-yellow-100 text-yellow-800';
+    case 'Completed': return 'bg-blue-100 text-blue-800';
+    case 'Cancelled': return 'bg-red-100 text-red-800';
+    default: return 'bg-gray-100 text-gray-800';
 }
 };
 
-// Save edited event to events state
-const handleSaveEdit = () => {
-setEvents((prev) =>
-    prev.map((e) => (e._id === editingEvent._id ? editingEvent : e))
-);
-setEditingEvent(null);
-toast.success('Event updated');
+const getTicketStatusColor = (status) => {
+switch (status) {
+    case 'active': return 'bg-green-100 text-green-800';
+    case 'inactive': return 'bg-gray-100 text-gray-800';
+    case 'sold_out': return 'bg-red-100 text-red-800';
+    default: return 'bg-gray-100 text-gray-800';
+}
 };
 
+if (loading) {
 return (
-<div className="max-w-6xl mx-auto p-6 bg-white rounded-2xl shadow-lg mt-10">
-    <h2 className="text-2xl font-bold mb-6 text-gray-800">My Events</h2>
+    <div className="max-w-6xl mx-auto p-6 bg-white rounded-2xl shadow-lg mt-10">
+    <div className="animate-pulse">
+        <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
+        <div className="space-y-4">
+        {[1, 2, 3].map(i => (
+            <div key={i} className="h-48 bg-gray-200 rounded-xl"></div>
+        ))}
+        </div>
+    </div>
+    </div>
+);
+}
 
-    {loading ? (
-    <p>Loading events...</p>
-    ) : events.length === 0 ? (
-    <p>You haven't created any events yet.</p>
-    ) : (
-    <div className="space-y-6">
-        {events.map((event) => (
+return (
+<div className="max-w-6xl mx-auto p-6 bg-white rounded-2xl shadow-lg mt-15">
+    
+    {notifications.length > 0 && (
+    <div className="fixed top-4 right-4 z-50 space-y-2">
+        {notifications.map(notification => (
         <div
-            key={event._id}
-            className="border rounded-xl p-4 flex flex-col md:flex-row gap-4 shadow-sm"
+            key={notification.id}
+            className={`px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 ${
+            notification.type === 'success' ? 'bg-green-500 text-white' :
+            notification.type === 'error' ? 'bg-red-500 text-white' :
+            'bg-blue-500 text-white'
+            }`}
         >
-            <img
-            src={event.imageUrl}
-            alt={event.title}
-            className="w-full md:w-40 h-40 object-cover rounded-xl border"
-            />
-            <div className="flex-1">
-            <h3 className="text-xl font-bold text-gray-800">{event.title}</h3>
-            <p className="text-sm italic text-gray-700">{event.description}</p>
-            <p className="text-sm text-gray-600">
-                {event.date} @ {event.time}
-            </p>
-            <p className="text-sm text-gray-600">📍 {event.location}</p>
-            <p className="text-sm text-gray-600">🎫 {event.category}</p>
-            <p className="text-sm font-semibold text-blue-700 mt-1">
-                Status: {event.status}
-            </p>
-
-            <div className="mt-2">
-                <p className="font-semibold">Tickets:</p>
-                <ul className="text-sm text-gray-700 list-disc ml-5">
-                {event.ticketTypes.map((ticket, i) => (
-                    <li key={i}>
-                    {ticket.type} – Rs. {ticket.price} × {ticket.count}
-                    </li>
-                ))}
-                </ul>
-            </div>
-
-            <div className="flex gap-2 mt-3">
-                <button
-                onClick={() =>
-                    handleStatusUpdate(
-                    event._id,
-                    event.status === 'Coming Soon' ? 'Sold Out' : 'Coming Soon'
-                    )
-                }
-                className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-xl text-sm"
-                >
-                Toggle Status
-                </button>
-                <button
-                onClick={() => setEditingEvent(event)}
-                className="px-3 py-1 bg-blue-100 text-blue-800 rounded-xl text-sm flex items-center gap-1"
-                >
-                <Pencil size={14} /> Edit
-                </button>
-                <button
-                onClick={() => handleDelete(event._id)}
-                className="px-3 py-1 bg-red-100 text-red-800 rounded-xl text-sm"
-                >
-                <Trash2 size={14} />
-                </button>
-            </div>
-            </div>
+            {notification.type === 'success' && <Check size={16} />}
+            {notification.type === 'error' && <AlertCircle size={16} />}
+            {notification.message}
         </div>
         ))}
     </div>
     )}
 
-    {/* Edit Modal */}
-    {editingEvent && (
-    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-        <div className="bg-white p-6 rounded-xl w-full max-w-3xl max-h-[90vh] overflow-auto space-y-4">
-        <div className="flex justify-between items-center">
-            <h3 className="text-xl font-semibold">Edit Event</h3>
-            <button
-            onClick={() => setEditingEvent(null)}
-            className="text-gray-500 hover:text-gray-900"
-            title="Close"
-            >
-            <X size={24} />
-            </button>
+
+    <div className="flex justify-between items-center mb-6">
+    <h2 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
+        <div className="p-2 bg-purple-100 rounded-lg">
+        <FileText className="text-purple-600" size={28} />
         </div>
-
-        {/* Title */}
-        <label className="block font-semibold">Title</label>
-        <input
-            type="text"
-            className="w-full border rounded-xl px-4 py-2"
-            value={editingEvent.title}
-            onChange={(e) => handleEditChange('title', e.target.value)}
-        />
-
-        {/* Description */}
-        <label className="block font-semibold mt-2">Description</label>
-        <textarea
-            rows={3}
-            className="w-full border rounded-xl px-4 py-2"
-            value={editingEvent.description}
-            onChange={(e) => handleEditChange('description', e.target.value)}
-        />
-
-        {/* Date and Time */}
-        <div className="grid grid-cols-2 gap-4 mt-2">
-            <div>
-            <label className="block font-semibold">Date</label>
-            <input
-                type="date"
-                className="w-full border rounded-xl px-4 py-2"
-                value={editingEvent.date}
-                onChange={(e) => handleEditChange('date', e.target.value)}
-            />
-            </div>
-            <div>
-            <label className="block font-semibold">Time</label>
-            <input
-                type="time"
-                className="w-full border rounded-xl px-4 py-2"
-                value={editingEvent.time}
-                onChange={(e) => handleEditChange('time', e.target.value)}
-            />
-            </div>
-        </div>
-
-        {/* Location */}
-        <label className="block font-semibold mt-2">Location</label>
-        <input
-            type="text"
-            className="w-full border rounded-xl px-4 py-2"
-            value={editingEvent.location}
-            onChange={(e) => handleEditChange('location', e.target.value)}
-        />
-
-        {/* Category */}
-        <label className="block font-semibold mt-2">Category</label>
-        <select
-            className="w-full border rounded-xl px-4 py-2"
-            value={editingEvent.category}
-            onChange={(e) => handleEditChange('category', e.target.value)}
+        Event Management
+    </h2>
+    
+    {viewMode === 'edit' && (
+        <button
+        onClick={() => {
+            setEditingEvent(null);
+            setViewMode('list');
+        }}
+        className="px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-all flex items-center gap-2 mt-15"
         >
-            <option value="">Select Category</option>
-            <option value="Concert">Concert</option>
-            <option value="Webinar">Webinar</option>
-            <option value="Workshop">Workshop</option>
-            <option value="Festival">Festival</option>
-            <option value="DJ">DJ</option>
-            <option value="Exhibition">Exhibition</option>
-        </select>
+        <X size={16} />
+        Back to List
+        </button>
+    )}
+    </div>
 
-        {/* Ticket Types */}
-        <label className="block font-semibold mt-2">Ticket Types</label>
-        {editingEvent.ticketTypes.map((ticket, i) => (
-            <div
-            key={i}
-            className="grid grid-cols-12 gap-2 items-center mb-2"
-            >
+    {viewMode === 'list' ? (
+
+    <>
+        {events.length === 0 ? (
+        <div className="text-center py-12">
+            <div className="p-4 bg-gray-100 rounded-full w-16 h-16 mx-auto mb-4">
+            <Calendar className="text-gray-400" size={32} />
+            </div>
+            <p className="text-gray-500 text-lg">You haven't created any events yet.</p>
+        </div>
+        ) : (
+        <div className="space-y-6">
+            {events.map((event) => {
+            const totalTickets = event.ticketTypes.reduce((sum, t) => sum + t.quantity + t.sold, 0);
+            const soldTickets = event.ticketTypes.reduce((sum, t) => sum + t.sold, 0);
+            const availableTickets = event.ticketTypes.reduce((sum, t) => sum + t.quantity, 0);
+            
+            return (
+                <div
+                key={event._id}
+                className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow"
+                >
+                <div className="p-6">
+                    <div className="flex flex-col lg:flex-row gap-6">
+                
+                    <div className="lg:w-48 h-48 flex-shrink-0">
+                        <img
+                        src={event.image}
+                        alt={event.title}
+                        className="w-full h-full object-cover rounded-xl"
+                        />
+                    </div>
+
+                    
+                    <div className="flex-1">
+                        <div className="flex justify-between items-start mb-3">
+                        <h3 className="text-xl font-bold text-gray-800">{event.title}</h3>
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${getEventStatusColor(event.status)}`}>
+                            {event.status}
+                        </span>
+                        </div>
+                        
+                        <p className="text-gray-600 mb-4 line-clamp-2">{event.description}</p>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Calendar size={16} className="text-purple-600" />
+                            {event.date}
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Clock size={16} className="text-purple-600" />
+                            {event.time}
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <MapPin size={16} className="text-purple-600" />
+                            {event.venue}
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Users size={16} className="text-purple-600" />
+                            {soldTickets}/{event.maxAttendee} attendees
+                        </div>
+                        </div>
+
+                        
+                        <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                        <h4 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                            <Ticket size={16} className="text-purple-600" />
+                            Ticket Summary
+                        </h4>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                            <div>
+                            <p className="text-gray-600">Total Tickets</p>
+                            <p className="font-semibold">{totalTickets}</p>
+                            </div>
+                            <div>
+                            <p className="text-gray-600">Sold</p>
+                            <p className="font-semibold text-green-600">{soldTickets}</p>
+                            </div>
+                            <div>
+                            <p className="text-gray-600">Available</p>
+                            <p className="font-semibold text-blue-600">{availableTickets}</p>
+                            </div>
+                            <div>
+                            <p className="text-gray-600">Revenue</p>
+                            <p className="font-semibold text-purple-600">
+                                LKR {event.ticketTypes.reduce((sum, t) => sum + (t.price * t.sold), 0).toLocaleString()}
+                            </p>
+                            </div>
+                        </div>
+                        </div>
+
+                        
+                        <div className="flex flex-wrap gap-2">
+                        <button
+                            onClick={() => handleEditEvent(event)}
+                            className="px-4 py-2 bg-blue-100 text-blue-800 rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-2 text-sm"
+                        >
+                            <Pencil size={14} />
+                            Edit Event
+                        </button>
+                        
+                        <button
+                            onClick={() => handleManageTickets(event)}
+                            className="px-4 py-2 bg-purple-100 text-purple-800 rounded-lg hover:bg-purple-200 transition-colors flex items-center gap-2 text-sm"
+                        >
+                            <Ticket size={14} />
+                            Manage Tickets
+                        </button>
+                        
+                        <select
+                            value={event.status}
+                            onChange={(e) => handleEventStatusUpdate(event._id, e.target.value)}
+                            className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                        >
+                            <option value="Active">Active</option>
+                            <option value="Draft">Draft</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                        
+                        <button
+                            onClick={() => handleDeleteEvent(event._id)}
+                            className="px-4 py-2 bg-red-100 text-red-800 rounded-lg hover:bg-red-200 transition-colors flex items-center gap-2 text-sm"
+                        >
+                            <Trash2 size={14} />
+                            Delete
+                        </button>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+                </div>
+            );
+            })}
+        </div>
+        )}
+    </>
+    ) : (
+    // Edit Event View
+    <div className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <div className="space-y-4">
+            <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Event Title</label>
             <input
                 type="text"
-                placeholder="Type"
-                className="col-span-4 px-3 py-2 border rounded-xl"
-                value={ticket.type}
-                onChange={(e) =>
-                handleTicketChange(i, 'type', e.target.value)
-                }
-                required
+                value={editingEvent?.title || ''}
+                onChange={(e) => handleEventFieldChange('title', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
             />
-            <input
-                type="number"
-                placeholder="Price (LKR)"
-                className="col-span-3 px-3 py-2 border rounded-xl"
-                value={ticket.price}
-                onChange={(e) =>
-                handleTicketChange(i, 'price', e.target.value)
-                }
-                min="0"
-                required
-            />
-            <input
-                type="number"
-                placeholder="Count"
-                className="col-span-3 px-3 py-2 border rounded-xl"
-                value={ticket.count}
-                onChange={(e) =>
-                handleTicketChange(i, 'count', e.target.value)
-                }
-                min="0"
-                required
-            />
-            <button
-                type="button"
-                className="col-span-2 text-red-600 hover:text-red-800"
-                onClick={() => removeTicketType(i)}
-                title="Remove ticket type"
-                disabled={editingEvent.ticketTypes.length === 1}
-            >
-                <Trash2 size={20} />
-            </button>
             </div>
-        ))}
-        <button
-            type="button"
-            className="text-blue-600 text-sm hover:underline"
-            onClick={addTicketType}
-        >
-            <Plus size={16} /> Add Ticket Type
-        </button>
-
-        {/* Status - Display only, since auto updates based on tickets */}
-        <p className="mt-3 text-sm italic text-gray-600">
-            Status is auto-updated based on ticket availability (Sold Out if
-            no tickets left).
-        </p>
-
-        <div className="mt-6 flex justify-end gap-4">
-            <button
-            onClick={() => setEditingEvent(null)}
-            className="px-4 py-2 rounded-xl border border-gray-300"
-            >
-            Cancel
-            </button>
-            <button
-            onClick={handleSaveEdit}
-            className="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700"
-            >
-            Save Changes
-            </button>
+            
+            <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+            <textarea
+                rows={4}
+                value={editingEvent?.description || ''}
+                onChange={(e) => handleEventFieldChange('description', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+            />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                <select
+                value={editingEvent?.category || ''}
+                onChange={(e) => handleEventFieldChange('category', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                >
+                <option value="">Select Category</option>
+                <option value="Event">Event</option>
+                <option value="Theater">Theater</option>
+                </select>
+            </div>
+            
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Subcategory</label>
+                <input
+                type="text"
+                value={editingEvent?.subcategory || ''}
+                onChange={(e) => handleEventFieldChange('subcategory', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                />
+            </div>
+            </div>
         </div>
+        
+        
+        <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                <input
+                type="date"
+                value={editingEvent?.date || ''}
+                onChange={(e) => handleEventFieldChange('date', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                />
+            </div>
+            
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Time</label>
+                <input
+                type="time"
+                value={editingEvent?.time || ''}
+                onChange={(e) => handleEventFieldChange('time', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                />
+            </div>
+            </div>
+            
+            <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Venue</label>
+            <input
+                type="text"
+                value={editingEvent?.venue || ''}
+                onChange={(e) => handleEventFieldChange('venue', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+            />
+            </div>
+            
+            <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Max Attendees</label>
+            <input
+                type="number"
+                value={editingEvent?.maxAttendee || ''}
+                onChange={(e) => handleEventFieldChange('maxAttendee', parseInt(e.target.value))}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                min="1"
+            />
+            </div>
+        </div>
+        </div>
+        
+        
+        <div className="flex justify-end">
+        <button
+            onClick={handleSaveEvent}
+            className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+        >
+            <Save size={16} />
+            Save Changes
+        </button>
         </div>
     </div>
     )}
 
-    <ToastContainer position="bottom-center" autoClose={3000} />
+    
+    {editingTickets && (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 mt-20">
+        <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-auto">
+        <div className="p-6">
+            <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-bold text-gray-800">Manage Tickets - {editingTickets.title}</h3>
+            <button
+                onClick={() => setEditingTickets(null)}
+                className="text-gray-500 hover:text-gray-700"
+            >
+                <X size={24} />
+            </button>
+            </div>
+
+            <div className="space-y-6">
+            {editingTickets.ticketTypes.map((ticket) => (
+                <div key={ticket._id} className="border border-gray-200 rounded-lg p-4">
+                <div className="flex justify-between items-start mb-4">
+                    <h4 className="font-semibold text-gray-800">Ticket Type</h4>
+                    <div className="flex items-center gap-2">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTicketStatusColor(ticket.status)}`}>
+                        {ticket.status}
+                    </span>
+                    <button
+                        onClick={() => handleTicketStatusToggle(ticket._id)}
+                        className="text-blue-600 hover:text-blue-800 text-sm"
+                    >
+                        Toggle Status
+                    </button>
+                    <button
+                        onClick={() => handleRemoveTicket(ticket._id)}
+                        className="text-red-600 hover:text-red-800"
+                    >
+                        <Trash2 size={16} />
+                    </button>
+                    </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    <input
+                        type="text"
+                        value={ticket.name}
+                        onChange={(e) => handleTicketChange(ticket._id, 'name', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    />
+                    </div>
+                    
+                    <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Price (LKR)</label>
+                    <input
+                        type="number"
+                        value={ticket.price}
+                        onChange={(e) => handleTicketChange(ticket._id, 'price', parseInt(e.target.value) || 0)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                        min="0"
+                    />
+                    </div>
+                    
+                    <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Available Quantity</label>
+                    <input
+                        type="number"
+                        value={ticket.quantity}
+                        onChange={(e) => handleTicketChange(ticket._id, 'quantity', parseInt(e.target.value) || 0)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                        min="0"
+                    />
+                    </div>
+                    
+                    <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Sold</label>
+                    <input
+                        type="number"
+                        value={ticket.sold}
+                        onChange={(e) => handleTicketChange(ticket._id, 'sold', parseInt(e.target.value) || 0)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                        min="0"
+                    />
+                    </div>
+                    
+                    <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Max Per Purchase</label>
+                    <input
+                        type="number"
+                        value={ticket.maxPerPurchase}
+                        onChange={(e) => handleTicketChange(ticket._id, 'maxPerPurchase', parseInt(e.target.value) || 1)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                        min="1"
+                    />
+                    </div>
+                </div>
+                
+                <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <textarea
+                    rows={2}
+                    value={ticket.description}
+                    onChange={(e) => handleTicketChange(ticket._id, 'description', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    placeholder="Optional description of ticket benefits"
+                    />
+                </div>
+                </div>
+            ))}
+            </div>
+
+            <div className="flex justify-between items-center mt-6">
+            <button
+                onClick={handleAddTicket}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+            >
+                <Plus size={16} />
+                Add Ticket Type
+            </button>
+            
+            <div className="flex gap-3">
+                <button
+                onClick={() => setEditingTickets(null)}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                Cancel
+                </button>
+                <button
+                onClick={handleSaveTickets}
+                className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+                >
+                <Save size={16} />
+                Save Tickets
+                </button>
+            </div>
+            </div>
+        </div>
+        </div>
+    </div>
+    )}
 </div>
 );
 }
