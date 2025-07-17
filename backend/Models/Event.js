@@ -46,11 +46,6 @@ const eventSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
-    // tickets: [{
-    //     type: mongoose.Schema.Types.ObjectId,
-    //     ref: 'Ticket'
-    // }],
-    // Optional: Add event status
     status: {
         type: String,
         enum: ['draft', 'published', 'cancelled', 'completed'],

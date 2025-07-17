@@ -1,3 +1,5 @@
+const mongoose = require('mongoose');
+
 const Event = require('../Models/Event');
 const Ticket = require('../Models/Ticket');
 
@@ -36,7 +38,7 @@ const createEvent = async (req, res) => {
         
         const eventDate = new Date(date);
         const currentDate = new Date();
-        currentDate.setHours(0, 0, 0, 0); // Set to start of day for comparison
+        currentDate.setHours(0, 0, 0, 0); 
         
         if (eventDate < currentDate) {
             return res.status(400).json({
@@ -280,7 +282,6 @@ const updateEvent = async (req, res) => {
             });
         }
 
-        // Check if user is the creator
         if (event.createdBy.toString() !== req.user._id.toString()) {
             return res.status(403).json({
                 success: false,
@@ -318,8 +319,7 @@ const updateEvent = async (req, res) => {
             eventId,
             { ...updates, updatedAt: new Date() },
             { new: true, runValidators: true }
-        ).populate('createdBy', 'firstName lastName organizationName organizationType');
-
+        );
         res.json({
             success: true,
             message: 'Event updated successfully',
@@ -333,6 +333,417 @@ const updateEvent = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error while updating event'
+        });
+    }
+};
+
+// Add a new ticket to an existing event
+const addTicketToEvent = async (req, res) => {
+    try {
+        const { eventId } = req.params;
+        const ticketData = req.body;
+
+        // Find event and verify ownership
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({
+                success: false,
+                message: 'Event not found'
+            });
+        }
+
+        if (event.createdBy.toString() !== req.user._id.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: 'You can only add tickets to your own events'
+            });
+        }
+
+        // Check current ticket count
+        const currentTicketCount = await Ticket.countDocuments({ eventId: eventId });
+        if (currentTicketCount >= 5) {
+            return res.status(400).json({
+                success: false,
+                message: 'Maximum 5 ticket types allowed per event'
+            });
+        }
+
+        // Validate ticket data
+        if (!ticketData.name || ticketData.name.trim() === '') {
+            return res.status(400).json({
+                success: false,
+                message: 'Ticket name is required'
+            });
+        }
+
+        if (ticketData.price < 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Price must be 0 or greater'
+            });
+        }
+
+        if (ticketData.quantity <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Quantity must be greater than 0'
+            });
+        }
+
+        if (ticketData.maxPerPurchase <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Max per purchase must be greater than 0'
+            });
+        }
+
+        // Check total capacity
+        const existingTickets = await Ticket.find({ eventId: eventId });
+        const currentTotalTickets = existingTickets.reduce((sum, ticket) => 
+            sum + ticket.quantity + (ticket.sold || 0), 0
+        );
+        
+        const newTotalTickets = currentTotalTickets + ticketData.quantity;
+        if (newTotalTickets > event.maxAttendee) {
+            return res.status(400).json({
+                success: false,
+                message: `Adding this ticket would exceed maximum attendees. Current: ${currentTotalTickets}, Max allowed: ${event.maxAttendee}`
+            });
+        }
+
+        // Create new ticket
+        const newTicket = new Ticket({
+            name: ticketData.name.trim(),
+            description: ticketData.description ? ticketData.description.trim() : '',
+            price: parseInt(ticketData.price) || 0,
+            currency: ticketData.currency || 'LKR',
+            quantity: parseInt(ticketData.quantity),
+            eventId: eventId,
+            status: ticketData.status || 'active',
+            maxPerPurchase: parseInt(ticketData.maxPerPurchase) || 1,
+            saleStartDate: ticketData.saleStartDate ? new Date(ticketData.saleStartDate) : undefined,
+            saleEndDate: ticketData.saleEndDate ? new Date(ticketData.saleEndDate) : undefined
+        });
+
+        const savedTicket = await newTicket.save();
+
+        res.status(201).json({
+            success: true,
+            message: 'Ticket added successfully',
+            data: {
+                ticket: savedTicket
+            }
+        });
+
+    } catch (error) {
+        console.error('Add ticket error:', error);
+
+        if (error.name === 'ValidationError') {
+            const validationErrors = Object.values(error.errors).map(err => err.message);
+            return res.status(400).json({
+                success: false,
+                message: 'Validation failed',
+                errors: validationErrors
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error while adding ticket'
+        });
+    }
+};
+
+// Update a specific ticket
+const updateTicket = async (req, res) => {
+    try {
+        const { eventId, ticketId } = req.params;
+        const ticketData = req.body;
+
+        // Find event and verify ownership
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({
+                success: false,
+                message: 'Event not found'
+            });
+        }
+
+        if (event.createdBy.toString() !== req.user._id.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: 'You can only update tickets for your own events'
+            });
+        }
+
+        // Find the ticket
+        const ticket = await Ticket.findOne({ _id: ticketId, eventId: eventId });
+        if (!ticket) {
+            return res.status(404).json({
+                success: false,
+                message: 'Ticket not found or doesn\'t belong to this event'
+            });
+        }
+
+        // Validate ticket data
+        if (!ticketData.name || ticketData.name.trim() === '') {
+            return res.status(400).json({
+                success: false,
+                message: 'Ticket name is required'
+            });
+        }
+
+        if (ticketData.price < 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Price must be 0 or greater'
+            });
+        }
+
+        if (ticketData.quantity < 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Quantity must be 0 or greater'
+            });
+        }
+
+        if (ticketData.maxPerPurchase <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Max per purchase must be greater than 0'
+            });
+        }
+
+        // Check total capacity
+        const existingTickets = await Ticket.find({ eventId: eventId, _id: { $ne: ticketId } });
+        const otherTicketsTotal = existingTickets.reduce((sum, t) => 
+            sum + t.quantity + (t.sold || 0), 0
+        );
+        
+        const newTotalTickets = otherTicketsTotal + parseInt(ticketData.quantity) + (ticket.sold || 0);
+        if (newTotalTickets > event.maxAttendee) {
+            return res.status(400).json({
+                success: false,
+                message: `Total tickets would exceed maximum attendees. Max allowed: ${event.maxAttendee}`
+            });
+        }
+
+        // Update ticket
+        const updatedTicket = await Ticket.findByIdAndUpdate(
+            ticketId,
+            {
+                name: ticketData.name.trim(),
+                description: ticketData.description ? ticketData.description.trim() : '',
+                price: parseInt(ticketData.price) || 0,
+                currency: ticketData.currency || 'LKR',
+                quantity: parseInt(ticketData.quantity) || 0,
+                status: ticketData.status || 'active',
+                maxPerPurchase: parseInt(ticketData.maxPerPurchase) || 1,
+                updatedAt: new Date()
+            },
+            { new: true, runValidators: true }
+        );
+
+        res.json({
+            success: true,
+            message: 'Ticket updated successfully',
+            data: {
+                ticket: updatedTicket
+            }
+        });
+
+    } catch (error) {
+        console.error('Update ticket error:', error);
+
+        if (error.name === 'ValidationError') {
+            const validationErrors = Object.values(error.errors).map(err => err.message);
+            return res.status(400).json({
+                success: false,
+                message: 'Validation failed',
+                errors: validationErrors
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error while updating ticket'
+        });
+    }
+};
+
+// Toggle ticket status between active and inactive
+const toggleTicketStatus = async (req, res) => {
+    try {
+        const { eventId, ticketId } = req.params;
+        const { status } = req.body;
+
+        // Find event and verify ownership
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({
+                success: false,
+                message: 'Event not found'
+            });
+        }
+
+        if (event.createdBy.toString() !== req.user._id.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: 'You can only update tickets for your own events'
+            });
+        }
+
+        // Find the ticket
+        const ticket = await Ticket.findOne({ _id: ticketId, eventId: eventId });
+        if (!ticket) {
+            return res.status(404).json({
+                success: false,
+                message: 'Ticket not found or doesn\'t belong to this event'
+            });
+        }
+
+        // Validate status
+        if (!['active', 'inactive'].includes(status)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Status must be either "active" or "inactive"'
+            });
+        }
+
+        // Update ticket status
+        const updatedTicket = await Ticket.findByIdAndUpdate(
+            ticketId,
+            { 
+                status: status,
+                updatedAt: new Date()
+            },
+            { new: true, runValidators: true }
+        );
+
+        res.json({
+            success: true,
+            message: `Ticket status updated to ${status}`,
+            data: {
+                ticket: updatedTicket
+            }
+        });
+
+    } catch (error) {
+        console.error('Toggle ticket status error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error while updating ticket status'
+        });
+    }
+};
+
+// Get tickets for a specific event
+const getEventTickets = async (req, res) => {
+    try {
+        const { eventId } = req.params;
+
+        // Find event and verify ownership
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({
+                success: false,
+                message: 'Event not found'
+            });
+        }
+
+        if (event.createdBy.toString() !== req.user._id.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: 'You can only view tickets for your own events'
+            });
+        }
+
+        // Get all tickets for the event
+        const tickets = await Ticket.find({ eventId: eventId }).sort({ createdAt: 1 });
+
+        // Calculate summary
+        const summary = {
+            totalTypes: tickets.length,
+            totalQuantity: tickets.reduce((sum, t) => sum + t.quantity, 0),
+            totalSold: tickets.reduce((sum, t) => sum + (t.sold || 0), 0),
+            totalRevenue: tickets.reduce((sum, t) => sum + (t.price * (t.sold || 0)), 0),
+            activeTickets: tickets.filter(t => t.status === 'active').length
+        };
+
+        res.json({
+            success: true,
+            message: 'Event tickets retrieved successfully',
+            data: {
+                tickets,
+                summary
+            }
+        });
+
+    } catch (error) {
+        console.error('Get event tickets error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error while retrieving tickets'
+        });
+    }
+};
+
+// Delete a specific ticket
+const deleteTicket = async (req, res) => {
+    try {
+        const { eventId, ticketId } = req.params;
+
+        // Find event and verify ownership
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({
+                success: false,
+                message: 'Event not found'
+            });
+        }
+
+        if (event.createdBy.toString() !== req.user._id.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: 'You can only delete tickets from your own events'
+            });
+        }
+
+        // Check if this is the last ticket
+        const ticketCount = await Ticket.countDocuments({ eventId: eventId });
+        if (ticketCount <= 1) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot delete the last ticket. Events must have at least one ticket type.'
+            });
+        }
+
+        // Find and delete the ticket
+        const ticket = await Ticket.findOneAndDelete({
+            _id: ticketId,
+            eventId: eventId
+        });
+
+        if (!ticket) {
+            return res.status(404).json({
+                success: false,
+                message: 'Ticket not found or doesn\'t belong to this event'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Ticket deleted successfully',
+            data: {
+                deletedTicket: ticket
+            }
+        });
+
+    } catch (error) {
+        console.error('Delete ticket error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error while deleting ticket'
         });
     }
 };
@@ -369,11 +780,15 @@ const deleteEvent = async (req, res) => {
         }
 
         
+        const ticketDeleteResult = await Ticket.deleteMany({ eventId: eventId });
+        
+        // Delete the event
         await Event.findByIdAndDelete(eventId);
 
         return res.status(200).json({
             success: true,
-            message: 'Event deleted successfully'
+            message: 'Event and related tickets deleted successfully',
+            deletedTicketsCount: ticketDeleteResult.deletedCount
         });
 
     } catch (error) {
@@ -384,9 +799,15 @@ const deleteEvent = async (req, res) => {
         });
     }
 };
+
 module.exports = {
     createEvent,
     getMyEvents,
     updateEvent,
-    deleteEvent
+    deleteEvent,
+    getEventTickets,
+    addTicketToEvent,
+    updateTicket,
+    deleteTicket,
+    toggleTicketStatus
 };
