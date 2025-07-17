@@ -73,7 +73,7 @@ try {
 } catch (error) {
     console.error('Login error:', error);
     
-    // Handle different error types
+    
     if (error.response?.status === 401) {
     setErrors({ general: "Invalid email or password" });
     } else if (error.response?.status === 400) {
