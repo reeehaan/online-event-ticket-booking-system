@@ -1,592 +1,512 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Minus, CreditCard, User, Mail, Phone, MapPin, Loader2, Calendar, Clock, Map } from 'lucide-react';
-import axios from 'axios';
+import { X, Minus, Plus, ArrowLeft } from 'lucide-react';
 
 const TicketPurchase = ({ ticket, event, onClose, onPurchaseComplete }) => {
-    const [quantity, setQuantity] = useState(1);
-    const [customerInfo, setCustomerInfo] = useState({
-        name: '',
+    const [currentStep, setCurrentStep] = useState(1);
+    const [ticketQuantities, setTicketQuantities] = useState({});
+    const [billingDetails, setBillingDetails] = useState({
+        firstName: '',
+        lastName: '',
         email: '',
         phone: '',
-        address: ''
+        nicPassport: ''
     });
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [errors, setErrors] = useState({});
-    const [paymentStatus, setPaymentStatus] = useState('');
+    const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('');
+    const [termsAccepted, setTermsAccepted] = useState(false);
+    const [loading, setLoading] = useState(false);
 
-    const totalPrice = ticket.price * quantity;
-    const maxQuantity = Math.min(ticket.maxPerPurchase, ticket.remaining);
+    // Use actual event tickets data with fallback
+    const eventTickets = event?.tickets || [];
 
-    
     useEffect(() => {
-        const script = document.createElement('script');
-        script.src = 'https://www.payhere.lk/lib/payhere.js';
-        script.async = true;
-        document.body.appendChild(script);
-
-        
-        axios.defaults.baseURL = 'http://localhost:3000/api';
-        axios.defaults.headers.common['Content-Type'] = 'application/json';
-        
-        
-        const token = localStorage.getItem('authToken');
-        if (token) {
-            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        }
-
-        
-        const requestInterceptor = axios.interceptors.request.use(
-            (config) => {
-                const token = localStorage.getItem('authToken');
-                if (token) {
-                    config.headers.Authorization = `Bearer ${token}`;
-                }
-                return config;
-            },
-            (error) => Promise.reject(error)
-        );
-
-        
-        const responseInterceptor = axios.interceptors.response.use(
-            (response) => response,
-            (error) => {
-                if (error.response?.status === 401) {
-                    // Handle unauthorized access
-                    localStorage.removeItem('authToken');
-                    window.location.href = '/login';
-                }
-                return Promise.reject(error);
-            }
-        );
-
-        return () => {
-            // Cleanup
-            if (document.body.contains(script)) {
-                document.body.removeChild(script);
-            }
-            axios.interceptors.request.eject(requestInterceptor);
-            axios.interceptors.response.eject(responseInterceptor);
-        };
+        // Initialize with empty quantities - let user select from all available tickets
+        setTicketQuantities({});
     }, []);
 
-    const handleQuantityChange = (action) => {
-        if (action === 'increment' && quantity < maxQuantity) {
-            setQuantity(quantity + 1);
-        } else if (action === 'decrement' && quantity > 1) {
-            setQuantity(quantity - 1);
+    const updateQuantity = (ticketId, change) => {
+        setTicketQuantities(prev => {
+            const currentQty = prev[ticketId] || 0;
+            const newQty = Math.max(0, currentQty + change);
+            const ticketData = eventTickets.find(t => t._id === ticketId);
+            const maxAvailable = ticketData ? (ticketData.quantity - ticketData.sold) : 0;
+            
+            // Remove ticket from selection if quantity becomes 0
+            if (newQty === 0) {
+                const { [ticketId]: removed, ...rest } = prev;
+                return rest;
+            }
+            
+            return {
+                ...prev,
+                [ticketId]: Math.min(newQty, maxAvailable)
+            };
+        });
+    };
+
+    const calculateSubtotal = () => {
+        return Object.entries(ticketQuantities).reduce((total, [ticketId, quantity]) => {
+            const ticketData = eventTickets.find(t => t._id === ticketId);
+            return total + (ticketData ? ticketData.price * quantity : 0);
+        }, 0);
+    };
+
+    const calculateConvenienceFee = (subtotal) => {
+        return Math.round(subtotal * 0.01); // 1% convenience fee
+    };
+
+    const calculateTotal = () => {
+        const subtotal = calculateSubtotal();
+        const convenienceFee = calculateConvenienceFee(subtotal);
+        return subtotal + convenienceFee;
+    };
+
+    const isTicketAvailable = (ticketData) => {
+        if (!ticketData) return false;
+        return ticketData.status === 'active' && ticketData.quantity > ticketData.sold;
+    };
+
+    const getTicketCategoryDisplay = (ticketData) => {
+        if (!ticketData) return null;
+        
+        const isAvailable = isTicketAvailable(ticketData);
+        const quantity = ticketQuantities[ticketData._id] || 0;
+        const remaining = ticketData.quantity - ticketData.sold;
+        
+        return (
+            <div key={ticketData._id} className="flex items-center justify-between py-3 border-b border-gray-100">
+                <div className="flex-1">
+                    <div className="font-medium text-gray-900">{ticketData.name}</div>
+                    <div className="text-sm text-gray-600">
+                        {ticketData.price ? ticketData.price.toLocaleString() : '0'} {ticketData.currency || 'LKR'}
+                    </div>
+                </div>
+                
+                <div className="flex items-center space-x-4">
+                    {!isAvailable ? (
+                        <>
+                            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
+                                SOLD OUT
+                            </span>
+                            <span className="text-gray-400 w-8 text-center">-</span>
+                        </>
+                    ) : (
+                        <div className="flex items-center space-x-2">
+                            <button
+                                onClick={() => updateQuantity(ticketData._id, -1)}
+                                className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50"
+                                disabled={quantity === 0}
+                            >
+                                <Minus className="w-4 h-4 text-gray-600" />
+                            </button>
+                            <span className="w-8 text-center font-medium">{quantity}</span>
+                            <button
+                                onClick={() => updateQuantity(ticketData._id, 1)}
+                                className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50"
+                                disabled={quantity >= remaining}
+                            >
+                                <Plus className="w-4 h-4 text-gray-600" />
+                            </button>
+                        </div>
+                    )}
+                    
+                    <div className="w-24 text-right font-medium">
+                        {isAvailable && quantity > 0 
+                            ? `${(ticketData.price * quantity).toLocaleString()} LKR`
+                            : '-'
+                        }
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    const handleCheckout = () => {
+        if (Object.keys(ticketQuantities).length === 0) {
+            alert('Please select at least one ticket');
+            return;
+        }
+        setCurrentStep(2);
+    };
+
+    const handleBack = () => {
+        if (currentStep === 1) {
+            onClose();
+        } else {
+            setCurrentStep(1);
         }
     };
 
-    const handleInputChange = (field, value) => {
-        setCustomerInfo(prev => ({
+    const handleBillingChange = (field, value) => {
+        setBillingDetails(prev => ({
             ...prev,
             [field]: value
         }));
-        // Clear error when user starts typing
-        if (errors[field]) {
-            setErrors(prev => ({
-                ...prev,
-                [field]: ''
-            }));
-        }
     };
 
-    const validateForm = () => {
-        const newErrors = {};
-        
-        if (!customerInfo.name.trim()) {
-            newErrors.name = 'Name is required';
+    const handleProceedToPay = async () => {
+        if (!selectedPaymentMethod) {
+            alert('Please select a payment method');
+            return;
         }
         
-        if (!customerInfo.email.trim()) {
-            newErrors.email = 'Email is required';
-        } else if (!/\S+@\S+\.\S+/.test(customerInfo.email)) {
-            newErrors.email = 'Please enter a valid email';
-        }
-        
-        if (!customerInfo.phone.trim()) {
-            newErrors.phone = 'Phone number is required';
-        } else if (!/^\+?[\d\s\-\(\)]+$/.test(customerInfo.phone)) {
-            newErrors.phone = 'Please enter a valid phone number';
-        }
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
-
-    const formatDate = (dateString) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
-    };
-
-    const formatTime = (timeString) => {
-        if (!timeString) return 'TBD';
-        const time = new Date(`1970-01-01T${timeString}`);
-        return time.toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-        });
-    };
-
-    // Generate a simple hash for demonstration (in production, this should be done on backend)
-    const generateHash = (orderId, amount, currency) => {
-        // This is a simplified hash generation - in production, use proper HMAC with secret key
-        const merchantId = "1221149";
-        const merchantSecret = "your_merchant_secret"; // This should be kept secure on backend
-        const hashString = `${merchantId}${orderId}${amount}${currency}${merchantSecret}`;
-        return btoa(hashString); // Base64 encode for demo - use proper crypto in production
-    };
-
-    // API call functions using axios
-    const createPurchaseOrder = async (purchaseData) => {
-        try {
-            const response = await axios.post('/purchases/create', purchaseData);
-            return response.data;
-        } catch (error) {
-            console.error('Error creating purchase order:', error);
-            throw new Error(error.response?.data?.message || 'Failed to create purchase order');
-        }
-    };
-
-    const updatePurchaseStatus = async (orderId, status, transactionId) => {
-        try {
-            const response = await axios.put(`/purchases/${orderId}/status`, {
-                status,
-                transactionId
-            });
-            return response.data;
-        } catch (error) {
-            console.error('Error updating purchase status:', error);
-            throw new Error(error.response?.data?.message || 'Failed to update purchase status');
-        }
-    };
-
-    const sendTicketEmail = async (purchaseId) => {
-        try {
-            const response = await axios.post(`/purchases/${purchaseId}/send-email`);
-            return response.data;
-        } catch (error) {
-            console.error('Error sending ticket email:', error);
-            throw new Error(error.response?.data?.message || 'Failed to send ticket email');
-        }
-    };
-
-    // Mock fallback functions for demo purposes
-    const createPurchaseOrderMock = async (purchaseData) => {
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Generate order ID
-        const orderId = `ORDER_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        const purchaseId = `PURCHASE_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        
-        // Generate hash (this should be done on backend with proper security)
-        const hash = generateHash(orderId, purchaseData.totalAmount, ticket.currency);
-        
-        // Mock successful response
-        return {
-            success: true,
-            orderId,
-            purchaseId,
-            hash,
-            message: 'Order created successfully'
-        };
-    };
-
-    const updatePurchaseStatusMock = async (orderId, status, transactionId) => {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        console.log(`Updated purchase ${orderId} status to ${status}`, { transactionId });
-        
-        return {
-            success: true,
-            message: 'Purchase status updated'
-        };
-    };
-
-    const sendTicketEmailMock = async (purchaseId) => {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        console.log(`Sending ticket email for purchase ${purchaseId}`);
-        
-        return {
-            success: true,
-            message: 'Ticket email sent'
-        };
-    };
-
-    const initializePayHere = (orderData) => {
-        const payment = {
-            sandbox: true, // Set to false for production
-            merchant_id: "1221149", // Replace with your PayHere merchant ID
-            return_url: window.location.origin + "/payment/return",
-            cancel_url: window.location.origin + "/payment/cancel",
-            notify_url: window.location.origin + "/api/payment/notify",
-            order_id: orderData.orderId,
-            items: `${event.title} - ${ticket.name}`,
-            amount: totalPrice.toFixed(2),
-            currency: ticket.currency,
-            hash: orderData.hash,
-            first_name: customerInfo.name.split(' ')[0],
-            last_name: customerInfo.name.split(' ').slice(1).join(' ') || '',
-            email: customerInfo.email,
-            phone: customerInfo.phone,
-            address: customerInfo.address || '',
-            city: "Colombo",
-            country: "Sri Lanka",
-            delivery_address: customerInfo.address || '',
-            delivery_city: "Colombo",
-            delivery_country: "Sri Lanka",
-            custom_1: ticket.id,
-            custom_2: quantity.toString()
-        };
-
-        // PayHere event handlers
-        window.payhere.onCompleted = async function onCompleted(orderId) {
-            console.log("Payment completed. OrderID:" + orderId);
-            setPaymentStatus('Processing payment completion...');
-            
-            try {
-                // Try real API first, fallback to mock
-                try {
-                    await updatePurchaseStatus(orderData.purchaseId, 'completed', orderId);
-                    await sendTicketEmail(orderData.purchaseId);
-                } catch (apiError) {
-                    console.log('API not available, using mock functions');
-                    await updatePurchaseStatusMock(orderData.purchaseId, 'completed', orderId);
-                    await sendTicketEmailMock(orderData.purchaseId);
-                }
-                
-                // Notify parent component
-                onPurchaseComplete({
-                    orderId,
-                    purchaseId: orderData.purchaseId,
-                    event: event.title,
-                    ticketType: ticket.name,
-                    quantity,
-                    totalPrice,
-                    customerInfo
-                });
-                
-                setPaymentStatus('Payment successful!');
-                setTimeout(() => {
-                    onClose();
-                }, 2000);
-                
-            } catch (error) {
-                console.error('Error processing completed payment:', error);
-                setPaymentStatus('Payment completed but there was an error. Please contact support.');
-                setIsProcessing(false);
-            }
-        };
-
-        window.payhere.onDismissed = function onDismissed() {
-            console.log("Payment dismissed");
-            setPaymentStatus('Payment was cancelled');
-            setIsProcessing(false);
-        };
-
-        window.payhere.onError = async function onError(error) {
-            console.log("Error:" + error);
-            setPaymentStatus('Payment failed. Please try again.');
-            
-            try {
-                // Try real API first, fallback to mock
-                try {
-                    await updatePurchaseStatus(orderData.purchaseId, 'failed', null);
-                } catch (apiError) {
-                    console.log('API not available, using mock function');
-                    await updatePurchaseStatusMock(orderData.purchaseId, 'failed', null);
-                }
-            } catch (updateError) {
-                console.error('Error updating failed payment status:', updateError);
-            }
-            
-            setIsProcessing(false);
-        };
-
-        // Check if PayHere is loaded
-        if (window.payhere) {
-            window.payhere.startPayment(payment);
-        } else {
-            console.error('PayHere script not loaded');
-            setPaymentStatus('Payment system not available. Please try again.');
-            setIsProcessing(false);
-        }
-    };
-
-    const handlePurchase = async () => {
-        if (!validateForm()) {
+        if (!termsAccepted) {
+            alert('Please accept the terms and conditions');
             return;
         }
 
-        setIsProcessing(true);
-        setPaymentStatus('Creating order...');
+        // Validate billing details
+        const requiredFields = ['firstName', 'lastName', 'email', 'phone'];
+        const missingFields = requiredFields.filter(field => !billingDetails[field]?.trim());
+        
+        if (missingFields.length > 0) {
+            alert(`Please fill in: ${missingFields.join(', ')}`);
+            return;
+        }
 
+        setLoading(true);
+        
         try {
-            // Create purchase order
-            const purchaseData = {
-                eventId: event._id,
-                ticketId: ticket.id,
-                quantity,
-                pricePerTicket: ticket.price,
-                totalAmount: totalPrice,
-                userInfo: customerInfo,
-                paymentMethod: 'payhere'
-            };
-
-            // Try real API first, fallback to mock for demo
-            let orderResponse;
-            try {
-                orderResponse = await createPurchaseOrder(purchaseData);
-            } catch (apiError) {
-                console.log('API not available, using mock response');
-                orderResponse = await createPurchaseOrderMock(purchaseData);
-            }
+            // Here you would integrate with PayHere
+            // For now, we'll simulate the payment process
+            await new Promise(resolve => setTimeout(resolve, 2000));
             
-            if (orderResponse.success) {
-                setPaymentStatus('Redirecting to payment...');
-                
-                // Initialize PayHere payment
-                initializePayHere({
-                    orderId: orderResponse.orderId,
-                    purchaseId: orderResponse.purchaseId,
-                    hash: orderResponse.hash
-                });
-            } else {
-                throw new Error(orderResponse.message || 'Failed to create order');
-            }
+            const purchaseData = {
+                tickets: ticketQuantities,
+                billingDetails,
+                paymentMethod: selectedPaymentMethod,
+                total: calculateTotal(),
+                event: event
+            };
+            
+            onPurchaseComplete(purchaseData);
+            onClose();
         } catch (error) {
-            console.error('Purchase error:', error);
-            setPaymentStatus(`Failed to process purchase: ${error.message}`);
-            setIsProcessing(false);
+            alert('Payment failed. Please try again.');
+            console.error('Payment error:', error);
+        } finally {
+            setLoading(false);
         }
     };
 
+    const subtotal = calculateSubtotal();
+    const convenienceFee = calculateConvenienceFee(subtotal);
+    const total = calculateTotal();
+
+    // Safety check for event data
+    if (!event) {
+        return (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 mt-20">
+                <div className="bg-white rounded-lg p-6">
+                    <p>Event data not available</p>
+                    <button onClick={onClose} className="mt-4 bg-blue-600 text-white px-4 py-2 rounded">
+                        Close
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 mt-20">
+            <div className="bg-white rounded-lg w-full max-w-6xl max-h-[90vh] overflow-y-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b">
-                    <h2 className="text-xl font-bold text-gray-900">Purchase Tickets</h2>
-                    <button
-                        onClick={onClose}
-                        className="text-gray-400 hover:text-gray-600 transition-colors"
-                        disabled={isProcessing}
-                    >
+                    <div className="flex items-center space-x-4">
+                        <button onClick={handleBack} className="p-2 hover:bg-gray-100 rounded">
+                            <ArrowLeft className="w-5 h-5" />
+                        </button>
+                        <h2 className="text-xl font-semibold">
+                            {currentStep === 1 ? 'Select Tickets' : 'Payment Details'}
+                        </h2>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded">
                         <X className="w-6 h-6" />
                     </button>
                 </div>
 
-                {/* Content */}
-                <div className="p-6 space-y-6">
-                    {/* Payment Status */}
-                    {paymentStatus && (
-                        <div className={`p-4 rounded-lg ${
-                            paymentStatus.includes('successful') ? 'bg-green-50 text-green-700' :
-                            paymentStatus.includes('failed') || paymentStatus.includes('cancelled') ? 'bg-red-50 text-red-700' :
-                            'bg-blue-50 text-blue-700'
-                        }`}>
-                            <p className="text-sm font-medium">{paymentStatus}</p>
+                {/* Progress Steps */}
+                <div className="flex items-center justify-center py-6 bg-gray-50">
+                    <div className="flex items-center space-x-8">
+                        <div className="flex items-center space-x-2">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-medium ${
+                                currentStep === 1 
+                                    ? 'bg-blue-500 text-white' 
+                                    : 'bg-blue-600 text-white'
+                            }`}>
+                                1
+                            </div>
+                            <span className={currentStep === 1 ? 'text-gray-900 font-medium' : 'text-gray-600'}>
+                                Select Tickets
+                            </span>
+                        </div>
+                        <div className="w-16 h-px bg-gray-300"></div>
+                        <div className="flex items-center space-x-2">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-medium ${
+                                currentStep === 2 
+                                    ? 'bg-blue-500 text-white' 
+                                    : 'bg-gray-300 text-gray-600'
+                            }`}>
+                                2
+                            </div>
+                            <span className={currentStep === 2 ? 'text-gray-900 font-medium' : 'text-gray-600'}>
+                                Payment
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="p-6">
+                    {currentStep === 1 ? (
+                        /* Step 1: Ticket Selection */
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            {/* Left side - Event image */}
+                            <div>
+                                <img
+                                    src={event.image || '/api/placeholder/400/500'}
+                                    alt={event.title || 'Event'}
+                                    className="w-full h-auto rounded-lg"
+                                    onError={(e) => {
+                                        e.target.src = '/api/placeholder/400/500';
+                                    }}
+                                />
+                            </div>
+
+                            {/* Right side - Ticket selection */}
+                            <div>
+                                <h3 className="text-2xl font-bold text-blue-600 mb-6 text-center">
+                                    {event.title?.toUpperCase() || 'EVENT TICKETS'}
+                                </h3>
+
+                                <div className="bg-white border rounded-lg">
+                                    <div className="p-4 border-b bg-gray-50">
+                                        <div className="grid grid-cols-4 gap-4 text-sm font-medium text-gray-600">
+                                            <div>Category</div>
+                                            <div>Price</div>
+                                            <div>No. of Tickets</div>
+                                            <div className="text-right">Amount</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-4 space-y-2">
+                                        {eventTickets.length > 0 ? (
+                                            eventTickets.map(ticketData => getTicketCategoryDisplay(ticketData))
+                                        ) : (
+                                            <div className="text-center py-8 text-gray-500">
+                                                No tickets available for this event
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="p-4 border-t bg-gray-50">
+                                        <div className="flex justify-between items-center text-lg font-bold">
+                                            <span>Total</span>
+                                            <span>{total.toLocaleString()} LKR</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={handleCheckout}
+                                    disabled={Object.keys(ticketQuantities).length === 0}
+                                    className="w-full mt-6 bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                                >
+                                    <span>Checkout</span>
+                                    <span>→</span>
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        /* Step 2: Payment Details */
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            {/* Left side - Billing Details */}
+                            <div>
+                                <h3 className="text-xl font-semibold text-blue-600 mb-6">Billing Details</h3>
+                                <div className="space-y-4">
+                                    <input
+                                        type="text"
+                                        placeholder="First Name"
+                                        value={billingDetails.firstName}
+                                        onChange={(e) => handleBillingChange('firstName', e.target.value)}
+                                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                                    />
+                                    <input
+                                        type="text"
+                                        placeholder="Last Name"
+                                        value={billingDetails.lastName}
+                                        onChange={(e) => handleBillingChange('lastName', e.target.value)}
+                                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                                    />
+                                    <input
+                                        type="email"
+                                        placeholder="Email Address"
+                                        value={billingDetails.email}
+                                        onChange={(e) => handleBillingChange('email', e.target.value)}
+                                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                                    />
+                                    <input
+                                        type="tel"
+                                        placeholder="Phone No"
+                                        value={billingDetails.phone}
+                                        onChange={(e) => handleBillingChange('phone', e.target.value)}
+                                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                                    />
+                                    <input
+                                        type="text"
+                                        placeholder="NIC / Passport / Driving License"
+                                        value={billingDetails.nicPassport}
+                                        onChange={(e) => handleBillingChange('nicPassport', e.target.value)}
+                                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Right side - Booking Summary & Payment */}
+                            <div>
+                                <h3 className="text-xl font-semibold text-blue-600 mb-6">Booking Summary</h3>
+                                <div className="bg-gray-50 p-4 rounded-lg mb-6 space-y-2">
+                                    {Object.entries(ticketQuantities).map(([ticketId, quantity]) => {
+                                        const ticketData = eventTickets.find(t => t._id === ticketId);
+                                        if (!ticketData) return null;
+                                        return (
+                                            <div key={ticketId} className="flex justify-between">
+                                                <span>{quantity} x {ticketData.name} Ticket(s)</span>
+                                                <span>{(ticketData.price * quantity).toLocaleString()} LKR</span>
+                                            </div>
+                                        );
+                                    })}
+                                    <div className="flex justify-between pt-2 border-t">
+                                        <span>Sub Total</span>
+                                        <span>{subtotal.toLocaleString()} LKR</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span>Convenience Fee (1%)</span>
+                                        <span>+ {convenienceFee.toLocaleString()} LKR</span>
+                                    </div>
+                                    <div className="flex justify-between font-bold text-lg pt-2 border-t">
+                                        <span>Total</span>
+                                        <span>{total.toLocaleString()} LKR</span>
+                                    </div>
+                                </div>
+
+                                <h4 className="text-lg font-semibold text-blue-600 mb-4">Choose A Payment Method</h4>
+                                <div className="space-y-6 mb-6">
+                                    <div>
+                                        <label className="flex items-center space-x-3 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                value="visa_master"
+                                                checked={selectedPaymentMethod === 'visa_master'}
+                                                onChange={(e) => setSelectedPaymentMethod(e.target.value)}
+                                                className="text-blue-600"
+                                            />
+                                            <span className="text-gray-700">Pay via VISA / Master</span>
+                                        </label>
+                                        <div className="ml-7 mt-3 flex items-center space-x-2">
+                                            <img 
+                                                src="../src/assets/mastercard.webp" 
+                                                alt="Visa"
+                                                className="h-8 w-auto"
+                                                onError={(e) => e.target.style.display = 'none'}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="flex items-center space-x-3 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                value="koko"
+                                                checked={selectedPaymentMethod === 'koko'}
+                                                onChange={(e) => setSelectedPaymentMethod(e.target.value)}
+                                                className="text-blue-600"
+                                            />
+                                            <span className="text-gray-700">Pay via KOKO (Buy Now Pay Later)</span>
+                                        </label>
+                                        <div className="ml-7 mt-3">
+                                            <img 
+                                                src="../src/assets/koko.png" 
+                                                alt="KOKO"
+                                                className="h-8 w-auto"
+                                                onError={(e) => e.target.style.display = 'none'}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="flex items-center space-x-3 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                value="other"
+                                                checked={selectedPaymentMethod === 'other'}
+                                                onChange={(e) => setSelectedPaymentMethod(e.target.value)}
+                                                className="text-blue-600"
+                                            />
+                                            <span className="text-gray-700">Pay via AMEX, FriMi and Other</span>
+                                        </label>
+                                        <div className="ml-7 mt-3">
+                                            <img 
+                                                src="../src/assets/payhere.webp" 
+                                                alt="PayHere"
+                                                className="h-8 w-auto"
+                                                onError={(e) => e.target.style.display = 'none'}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {!selectedPaymentMethod && (
+                                    <p className="text-red-600 text-sm mb-4">Please select a payment method to proceed</p>
+                                )}
+
+                                <div className="mb-6">
+                                    <label className="flex items-start space-x-3 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={termsAccepted}
+                                            onChange={(e) => setTermsAccepted(e.target.checked)}
+                                            className="mt-1 text-blue-600"
+                                        />
+                                        <span className="text-sm">
+                                            * I accept and agree to{' '}
+                                            <button 
+                                                type="button"
+                                                className="text-blue-600 hover:underline"
+                                                onClick={() => {/* Handle terms modal */}}
+                                            >
+                                                Terms and Conditions
+                                            </button>
+                                        </span>
+                                    </label>
+                                </div>
+
+                                <p className="text-sm text-blue-600 mb-6">
+                                    In order to proceed, you should agree to T & C by clicking the above box
+                                </p>
+
+                                <div className="flex space-x-4">
+                                    <button
+                                        onClick={handleBack}
+                                        className="flex-1 bg-gray-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-gray-700 flex items-center justify-center space-x-2"
+                                    >
+                                        <ArrowLeft className="w-4 h-4" />
+                                        <span>Back</span>
+                                    </button>
+                                    <button
+                                        onClick={handleProceedToPay}
+                                        disabled={!selectedPaymentMethod || !termsAccepted || loading}
+                                        className="flex-1 bg-blue-500 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                                    >
+                                        <span>{loading ? 'Processing...' : 'Proceed to pay'}</span>
+                                        {!loading && <span>→</span>}
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     )}
-
-                    {/* Event Info */}
-                    <div className="bg-gray-50 rounded-lg p-4">
-                        <h3 className="font-semibold text-gray-900 mb-3">{event.title}</h3>
-                        <div className="space-y-2">
-                            <div className="flex items-center space-x-2 text-sm text-gray-600">
-                                <Calendar className="w-4 h-4" />
-                                <span>{formatDate(event.date)}</span>
-                            </div>
-                            <div className="flex items-center space-x-2 text-sm text-gray-600">
-                                <Clock className="w-4 h-4" />
-                                <span>{formatTime(event.time)}</span>
-                            </div>
-                            <div className="flex items-center space-x-2 text-sm text-gray-600">
-                                <Map className="w-4 h-4" />
-                                <span>{event.venue}</span>
-                            </div>
-                            <div className="mt-3 pt-2 border-t">
-                                <p className="text-sm font-medium text-gray-900">
-                                    Ticket Type: {ticket.name}
-                                </p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                    {ticket.remaining} tickets remaining
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Quantity Selection */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Quantity (Max: {maxQuantity})
-                        </label>
-                        <div className="flex items-center space-x-3">
-                            <button
-                                onClick={() => handleQuantityChange('decrement')}
-                                disabled={quantity <= 1 || isProcessing}
-                                className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            >
-                                <Minus className="w-4 h-4" />
-                            </button>
-                            <span className="font-semibold text-lg w-8 text-center">{quantity}</span>
-                            <button
-                                onClick={() => handleQuantityChange('increment')}
-                                disabled={quantity >= maxQuantity || isProcessing}
-                                className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            >
-                                <Plus className="w-4 h-4" />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Price Summary */}
-                    <div className="bg-blue-50 rounded-lg p-4">
-                        <div className="flex justify-between items-center mb-2">
-                            <span className="text-gray-700">Price per ticket:</span>
-                            <span className="font-semibold">{ticket.currency} {ticket.price.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between items-center mb-2">
-                            <span className="text-gray-700">Quantity:</span>
-                            <span className="font-semibold">{quantity}</span>
-                        </div>
-                        <div className="border-t pt-2">
-                            <div className="flex justify-between items-center">
-                                <span className="text-lg font-bold text-gray-900">Total:</span>
-                                <span className="text-lg font-bold text-blue-600">
-                                    {ticket.currency} {totalPrice.toLocaleString()}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Customer Information */}
-                    <div className="space-y-4">
-                        <h4 className="font-semibold text-gray-900">Customer Information</h4>
-                        
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Full Name *
-                            </label>
-                            <div className="relative">
-                                <User className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                                <input
-                                    type="text"
-                                    value={customerInfo.name}
-                                    onChange={(e) => handleInputChange('name', e.target.value)}
-                                    className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                                        errors.name ? 'border-red-500' : 'border-gray-300'
-                                    }`}
-                                    placeholder="Enter your full name"
-                                    disabled={isProcessing}
-                                />
-                            </div>
-                            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Email *
-                            </label>
-                            <div className="relative">
-                                <Mail className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                                <input
-                                    type="email"
-                                    value={customerInfo.email}
-                                    onChange={(e) => handleInputChange('email', e.target.value)}
-                                    className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                                        errors.email ? 'border-red-500' : 'border-gray-300'
-                                    }`}
-                                    placeholder="Enter your email"
-                                    disabled={isProcessing}
-                                />
-                            </div>
-                            {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Phone Number *
-                            </label>
-                            <div className="relative">
-                                <Phone className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                                <input
-                                    type="tel"
-                                    value={customerInfo.phone}
-                                    onChange={(e) => handleInputChange('phone', e.target.value)}
-                                    className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                                        errors.phone ? 'border-red-500' : 'border-gray-300'
-                                    }`}
-                                    placeholder="Enter your phone number"
-                                    disabled={isProcessing}
-                                />
-                            </div>
-                            {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Address (Optional)
-                            </label>
-                            <div className="relative">
-                                <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                                <textarea
-                                    value={customerInfo.address}
-                                    onChange={(e) => handleInputChange('address', e.target.value)}
-                                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    rows="2"
-                                    placeholder="Enter your address"
-                                    disabled={isProcessing}
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Purchase Button */}
-                    <button
-                        onClick={handlePurchase}
-                        disabled={isProcessing || maxQuantity === 0}
-                        className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center space-x-2"
-                    >
-                        {isProcessing ? (
-                            <>
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                <span>Processing...</span>
-                            </>
-                        ) : maxQuantity === 0 ? (
-                            <span>Sold Out</span>
-                        ) : (
-                            <>
-                                <CreditCard className="w-4 h-4" />
-                                <span>Proceed to Payment</span>
-                            </>
-                        )}
-                    </button>
-
-                    <div className="text-center space-y-2">
-                        <p className="text-xs text-gray-500">
-                            Payment secured by PayHere
-                        </p>
-                        <p className="text-xs text-gray-500">
-                            By purchasing tickets, you agree to our terms and conditions
-                        </p>
-                    </div>
                 </div>
             </div>
         </div>
     );
 };
-
-
 
 export default TicketPurchase;

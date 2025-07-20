@@ -31,15 +31,15 @@ const [isLoading, setIsLoading] = useState(false);
 const navigate = useNavigate();
 
 const [attendeeForm, setAttendeeForm] = useState({
-email: "rrr@gmail.com",
-password: "12345678",
-confirmPassword: "12345678",
-phone: "293884244",
-firstName: "rwehen",
-lastName: "jsjasdjkaf",
-dateOfBirth: "2002-02-01",
-interests: ['Sports'],
-location: "isodisjosjd"
+email: "",
+password: "",
+confirmPassword: "",
+phone: "",
+firstName: "",
+lastName: "",
+dateOfBirth: "",
+interests: [],
+location: ""
 });
 
 const [organizerForm, setOrganizerForm] = useState({

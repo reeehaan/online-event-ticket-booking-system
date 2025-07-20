@@ -14,7 +14,6 @@ ProtectedRoute.propTypes = {
   children: PropTypes.node.isRequired
 };
 
-// Component to handle guest-only routes (redirect if already logged in)
 export const GuestRoute = ({ children }) => {
   const userType = getCurrentUserType();
   
