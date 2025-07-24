@@ -26,6 +26,7 @@ import OrganizerProfile from './pages/Organizer/OrganizerProfile';
 import ManageEvents from './pages/Organizer/ManageEvents';
 import CreateEventFlow from './pages/Organizer/CreateEventFlow';
 import MyEvents from './pages/Organizer/MyEvents';
+import AdminDashboard from './pages/Admin/AdminDashboard';
 
 
 function App() {
@@ -52,9 +53,7 @@ function App() {
             <GuestRoute>
               <ForgotPasswordForm />
             </GuestRoute>
-          } />
-
-          
+          } />          
           <Route path="/" element={<UserLandingPage />} />
 
           {/* Protected Attendee Routes */}
@@ -124,6 +123,10 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
           
         </Route>
+
+        <Route path="/admin-dashboard" element={
+              <AdminDashboard />
+          } />
       </Routes>
     </Router>
   );

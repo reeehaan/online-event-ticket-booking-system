@@ -9,6 +9,7 @@ const EventDetails = () => {
     const { eventId } = useParams();
     const event = location.state?.event;
 
+
     const [showPurchaseModal, setShowPurchaseModal] = useState(false);
     const [selectedTicket, setSelectedTicket] = useState(null);
 
@@ -196,6 +197,7 @@ const EventDetails = () => {
             
             {showPurchaseModal && selectedTicket && (
                 <TicketPurchase
+                    eventId={eventId}
                     ticket={selectedTicket}
                     event={event}
                     onClose={handleCloseModal}
