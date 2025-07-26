@@ -13,16 +13,26 @@ const verifyToken = async (req, res, next) => {
             });
         }
 
-        // Remove 'Bearer ' from token string
-        const token = authHeader.split(' ')[1];
+        // Handle both "Bearer token" and direct token formats
+        let token;
+        if (authHeader.startsWith('Bearer ')) {
+            token = authHeader.slice(7); // Remove 'Bearer ' (7 characters)
+        } else {
+            token = authHeader; // Direct token format
+        }
         
-        if (!token) {
+        if (!token || token.trim() === '') {
             return res.status(401).json({
                 success: false,
                 message: 'Access denied. Token format is invalid.'
             });
         }
 
+        // Clean the token (remove any extra whitespace)
+        token = token.trim();
+        
+        console.log('Token to verify:', token.substring(0, 20) + '...'); // Log first 20 chars for debugging
+        
         // Verify the token
         const verified = jwt.verify(token, process.env.TOKEN_SECRET);
         
@@ -33,17 +43,15 @@ const verifyToken = async (req, res, next) => {
                 message: 'Access denied. User not found.'
             });
         }
-
         
         req.user = {
             ...verified,
-            userData: user 
+            userData: user
         };
         
         next();
     } catch (err) {
-        console.error('Token verification error:', err);
-        
+        console.error('Token verification error:', err.message);
         
         if (err.name === 'TokenExpiredError') {
             return res.status(401).json({
@@ -53,7 +61,7 @@ const verifyToken = async (req, res, next) => {
         } else if (err.name === 'JsonWebTokenError') {
             return res.status(401).json({
                 success: false,
-                message: 'Access denied. Invalid token.'
+                message: 'Access denied. Invalid token format.'
             });
         } else {
             return res.status(401).json({

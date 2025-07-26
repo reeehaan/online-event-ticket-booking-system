@@ -9,6 +9,7 @@ require("./Database/mongodb.js");
 const user = require("./Routes/user-route");
 const organizer = require("./Routes/organizer-route.js");
 const attendee = require("./Routes/attendee-route.js")
+const ticketRoutes = require('./Routes/ticket-purchase-route.js');
 //body-parser
 // app.use(express.json());
 
@@ -26,8 +27,12 @@ app.use(cors());
 app.use('/api/user',user);
 //organizer
 app.use('/api/org',organizer);
-
+//attendee
 app.use('/api/attendee',attendee);
+//ticket and payhere 
+app.use('/api/attendee/ticket', ticketRoutes);
+
+
 
 
 
