@@ -1,3 +1,4 @@
+/* eslint-disable no-prototype-builtins */
 import React, { useState, useMemo, useEffect } from "react";
 import { Search, Calendar, MapPin, ChevronLeft, ChevronRight, ArrowRight, Loader2, Ticket } from "lucide-react";
 import axios from 'axios';
@@ -10,7 +11,7 @@ function UserLandingPage() {
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const navigate = useNavigate();
+    const navigate = useNavigate(); 
 
 useEffect(() => {
     const fetchEvents = async () => {
@@ -86,34 +87,115 @@ const formatEventTime = (timeStr) => {
     return `${displayHour}:${minutes} ${ampm}`;
 };
 
-const getButtonStyle = (status) => {
+// Replace the isEventAvailable function with this updated version:
+
+// Helper function to check if event is available for purchase
+const isEventAvailable = (event) => {
+    // Check if event status allows purchasing
+    if (event.status === 'canceled' || event.status === 'completed' || event.status === 'sold-out') {
+        return false;
+    }
+    
+    // Check if event has tickets available
+    if (!event.tickets || event.tickets.length === 0) {
+        return false;
+    }
+    
+    // Debug logging (remove in production)
+    console.log(`Checking availability for event: ${event.title}`);
+    console.log('Event tickets:', event.tickets);
+    
+    // Check if at least ONE ticket is active AND has available quantity
+    const hasAvailableTickets = event.tickets.some(ticket => {
+        // Check if ticket status is active
+        const isActive = ticket.status === 'active';
+        
+        // Check if ticket has remaining quantity
+        let hasQuantity = false;
+        if (ticket.hasOwnProperty('quantity') && ticket.hasOwnProperty('sold')) {
+            // If both quantity and sold fields exist, check remaining
+            hasQuantity = ticket.quantity > ticket.sold && ticket.quantity > 0;
+        } else if (ticket.hasOwnProperty('quantity')) {
+            // If only quantity field exists, check if > 0
+            hasQuantity = ticket.quantity > 0;
+        } else {
+            // If no quantity field, assume available if price exists and ticket is active
+            hasQuantity = ticket.price !== undefined && ticket.price !== null;
+        }
+        
+        // Debug logging for each ticket
+        console.log(`Ticket: ${ticket.name}, Status: ${ticket.status}, Active: ${isActive}, HasQuantity: ${hasQuantity}, Available: ${isActive && hasQuantity}`);
+        
+        // Ticket is available if it's BOTH active AND has quantity
+        return isActive && hasQuantity;
+    });
+    
+    console.log(`Event ${event.title} availability result: ${hasAvailableTickets}`);
+    return hasAvailableTickets;
+};
+
+// Helper function to determine event status for display
+const getEventDisplayStatus = (event) => {
+    if (event.status === 'canceled') return 'canceled';
+    if (event.status === 'completed') return 'completed';
+    if (event.status === 'coming-soon') return 'coming-soon';
+    
+    // Check if event is available based on ticket status and quantity
+    if (!isEventAvailable(event)) {
+        // If event has tickets but none are available, it's sold out
+        if (event.tickets && event.tickets.length > 0) {
+            return 'sold-out';
+        }
+        return 'sold-out';
+    }
+    
+    if (event.status === 'published') return 'published';
+    return 'published'; // default for available events
+};
+
+// Update button styles to show red for sold-out events
+const getButtonStyle = (event) => {
+    const status = getEventDisplayStatus(event);
+    
     switch (status) {
-    case 'sold-out':
-        return 'bg-red-100 text-red-600 cursor-not-allowed';
-    case 'coming-soon':
-        return 'bg-gray-100 text-gray-600 cursor-not-allowed';
-    case 'published':
-    default:
-        return 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer';
+        case 'sold-out':
+            return 'bg-red-500 text-white cursor-not-allowed'; // Changed to red background
+        case 'canceled':
+            return 'bg-gray-100 text-gray-600 cursor-not-allowed';
+        case 'completed':
+            return 'bg-gray-100 text-gray-600 cursor-not-allowed';
+        case 'coming-soon':
+            return 'bg-gray-100 text-gray-600 cursor-not-allowed';
+        case 'published':
+        default:
+            return 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer';
     }
 };
 
-const getButtonText = (status) => {
+// Add the missing getButtonText function
+const getButtonText = (event) => {
+    const status = getEventDisplayStatus(event);
+    
     switch (status) {
-    case 'sold-out':
-        return 'Sold Out';
-    case 'coming-soon':
-        return 'Coming Soon';
-    case 'published':
-    default:
-        return 'Buy Tickets';
+        case 'sold-out':
+            return 'Sold Out';
+        case 'canceled':
+            return 'Canceled';
+        case 'completed':
+            return 'Completed';
+        case 'coming-soon':
+            return 'Coming Soon';
+        case 'published':
+        default:
+            return 'Buy Tickets';
     }
 };
 
 const handleEventClick = (event) => {
-    if (event.status === 'published') {
-    navigate(`/event-details/${event._id}`, { state: { event } });
-    console.log('Navigate to event details:', event);
+    const status = getEventDisplayStatus(event);
+    if (status === 'published' && isEventAvailable(event)) {
+        navigate(`/event-details/${event._id}`, { state: { event } });
+        console.log('Navigate to event details:', event);
     }
 };
 
@@ -159,7 +241,7 @@ const chillVibeEvents = useMemo(() => {
 
 const ticketDeals = useMemo(() => {
     return searchFilteredEvents.filter(event => 
-    event.tickets && event.tickets.length > 1 
+    event.tickets && event.tickets.length > 1 && isEventAvailable(event)
     ).slice(0, 8);
 }, [searchFilteredEvents]);
 
@@ -167,12 +249,20 @@ const EventCard = ({ event, showDiscount = false }) => {
     const imageUrl = getImageUrl(event.image);
     const eventDate = formatEventDate(event.date);
     const eventTime = formatEventTime(event.time);
+    const eventAvailable = isEventAvailable(event);
+    const displayStatus = getEventDisplayStatus(event);
 
     const getEventPrice = () => {
-        if (!event.tickets || event.tickets.length === 0) return "Free";
+        if (!eventAvailable) {
+            if (displayStatus === 'canceled') return "Canceled";
+            if (displayStatus === 'completed') return "Completed";
+            return "Sold out";
+        }
+    
+        if (!event.tickets || event.tickets.length === 0) return "Sold out";
     
         const prices = event.tickets.map(ticket => ticket.price).filter(price => price > 0);
-        if (prices.length === 0) return "Free";
+        if (prices.length === 0) return "Sold out";
     
         const minPrice = Math.min(...prices);
         const maxPrice = Math.max(...prices);
@@ -188,15 +278,19 @@ const EventCard = ({ event, showDiscount = false }) => {
 
     return (
     <div
-        className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 group cursor-pointer h-full flex flex-col"
-        onClick={() => handleEventClick(event)}
+        className={`bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 h-full flex flex-col ${
+            eventAvailable ? 'hover:shadow-xl group cursor-pointer' : 'cursor-not-allowed opacity-75'
+        }`}
+        onClick={() => eventAvailable && handleEventClick(event)}
     >
         <div className="relative overflow-hidden aspect-square">
         {imageUrl ? (
             <img
             src={imageUrl}
             alt={event.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className={`w-full h-full object-cover transition-transform duration-300 ${
+                eventAvailable ? 'group-hover:scale-105' : ''
+            }`}
             onError={(e) => {
                 e.target.style.display = 'none';
                 e.target.nextSibling.style.display = 'flex';
@@ -211,13 +305,23 @@ const EventCard = ({ event, showDiscount = false }) => {
             </div>
         </div>
         
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        {eventAvailable && (
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        )}
         
         <div className="absolute top-3 left-3 bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-medium">
         {event.subcategory}
         </div>
         
-        {showDiscount && hasMultipleTicketTypes && (
+        {!eventAvailable && (
+            <div className="absolute top-3 right-3 bg-red-500 text-white text-xs px-2 py-1 rounded-full font-medium">
+                {displayStatus === 'canceled' && 'Canceled'}
+                {displayStatus === 'completed' && 'Completed'}
+                {displayStatus === 'sold-out' && 'Sold Out'}
+            </div>
+        )}
+        
+        {showDiscount && hasMultipleTicketTypes && eventAvailable && (
         <div className="absolute top-3 right-3 bg-green-500 text-white text-xs px-2 py-1 rounded-full font-medium">
             Multiple Options
         </div>
@@ -225,38 +329,48 @@ const EventCard = ({ event, showDiscount = false }) => {
     </div>
 
     <div className="p-5 flex flex-col flex-1">
-        <h3 className="text-lg font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors duration-200 line-clamp-2 min-h-[3.5rem]">
+        <h3 className={`text-lg font-bold mb-3 transition-colors duration-200 line-clamp-2 min-h-[3.5rem] ${
+            eventAvailable ? 'text-gray-900 group-hover:text-blue-600' : 'text-gray-500'
+        }`}>
         {event.title}
         </h3>
 
-        <div className="flex items-center space-x-2 text-gray-600 mb-2">
+        <div className={`flex items-center space-x-2 mb-2 ${eventAvailable ? 'text-gray-600' : 'text-gray-400'}`}>
         <Calendar className="w-4 h-4 flex-shrink-0" />
         <span className="text-sm">{eventDate} • {eventTime}</span>
         </div>
 
-        <div className="flex items-start space-x-2 text-gray-600 mb-4">
+        <div className={`flex items-start space-x-2 mb-4 ${eventAvailable ? 'text-gray-600' : 'text-gray-400'}`}>
         <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" />
         <span className="text-sm line-clamp-2">{event.venue}</span>
         </div>
 
         <div className="mb-4 mt-auto">
         <div className="flex items-center space-x-2 mb-1">
-            <span className="text-xl font-bold text-blue-600">{getEventPrice()}</span>
+            <span className={`text-xl font-bold ${
+                eventAvailable ? 'text-blue-600' : 
+                displayStatus === 'canceled' ? 'text-red-600' :
+                displayStatus === 'completed' ? 'text-gray-600' : 'text-red-600'
+            }`}>
+                {getEventPrice()}
+            </span>
         </div>
-        {getEventPrice() !== "Free" && hasMultipleTicketTypes && (
+        {eventAvailable && getEventPrice() !== "Free" && hasMultipleTicketTypes && (
             <span className="text-gray-500 text-sm">Multiple pricing options</span>
         )}
         </div>
 
         <button
-        className={`w-full py-3 px-4 rounded-xl font-semibold transition-all duration-200 ${getButtonStyle(event.status)}`}
-        disabled={event.status === 'sold-out' || event.status === 'coming-soon'}
+        className={`w-full py-3 px-4 rounded-xl font-semibold transition-all duration-200 ${getButtonStyle(event)}`}
+        disabled={!eventAvailable}
         onClick={(e) => {
             e.stopPropagation();
-            handleEventClick(event);
+            if (eventAvailable) {
+                handleEventClick(event);
+            }
         }}
         >
-        {getButtonText(event.status)}
+        {getButtonText(event)}
         </button>
     </div>
     </div>

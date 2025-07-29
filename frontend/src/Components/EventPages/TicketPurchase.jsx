@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from 'react';
 import { X, Minus, Plus, ArrowLeft, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import axios from 'axios';
@@ -113,7 +114,7 @@ const TicketPurchase = ({ eventId, onClose, onPurchaseComplete }) => {
     };
 
     const calculateConvenienceFee = (subtotal) => {
-        return Math.round(subtotal * 0.01); // 1% convenience fee
+        return Math.round(subtotal * 0.02); // 2% convenience fee
     };
 
     const calculateTotal = () => {
@@ -407,7 +408,7 @@ const TicketPurchase = ({ eventId, onClose, onPurchaseComplete }) => {
 
     if (!event) {
         return (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 ">
                 <div className="bg-white rounded-lg p-6 max-w-md w-full">
                     <div className="flex items-center space-x-3 text-red-600 mb-4">
                         <AlertCircle className="w-6 h-6" />
@@ -433,7 +434,7 @@ const TicketPurchase = ({ eventId, onClose, onPurchaseComplete }) => {
     const hasSelectedTickets = Object.values(ticketQuantities).some(q => q > 0);
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 mt-20">
             <div className="bg-white rounded-lg w-full max-w-6xl max-h-[90vh] overflow-y-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b">
@@ -605,7 +606,7 @@ const TicketPurchase = ({ eventId, onClose, onPurchaseComplete }) => {
                                                 <span>{subtotal.toLocaleString()} LKR</span>
                                             </div>
                                             <div className="flex justify-between text-sm">
-                                                <span>Convenience Fee (1%)</span>
+                                                <span>Convenience Fee (2%)</span>
                                                 <span>+ {convenienceFee.toLocaleString()} LKR</span>
                                             </div>
                                             <div className="flex justify-between items-center text-lg font-bold pt-2 border-t">
