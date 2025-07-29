@@ -30,7 +30,6 @@ const getAllEvents = async (req, res) => {
                 
                 const tickets = await Ticket.find({ 
                     eventId: event._id,
-                    status: 'active' 
                 })
                 .select('name description price currency quantity sold maxPerPurchase status saleStartDate saleEndDate')
                 .sort({ price: 1 }); 
