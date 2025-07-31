@@ -27,6 +27,8 @@ import ManageEvents from './pages/Organizer/ManageEvents';
 import CreateEventFlow from './pages/Organizer/CreateEventFlow';
 import MyEvents from './pages/Organizer/MyEvents';
 import AdminDashboard from './pages/Admin/AdminDashboard';
+import AboutPage from './Components/About/About';
+import ContactPage from './Components/ContactUs/ContactUs';
 
 
 function App() {
@@ -53,7 +55,19 @@ function App() {
             <GuestRoute>
               <ForgotPasswordForm />
             </GuestRoute>
-          } />          
+          } /> 
+
+          <Route path="/about" element={
+            <GuestRoute>
+              <AboutPage/>
+            </GuestRoute>
+          } />
+
+          <Route path="/contact" element={
+            <GuestRoute>
+              <ContactPage/>
+            </GuestRoute>
+          } />            
           <Route path="/" element={<UserLandingPage />} />
 
           {/* Protected Attendee Routes */}
