@@ -307,26 +307,33 @@ const Header = ({ userType = 'guest' }) => {
                                 {/* Profile Dropdown */}
                                 {isProfileOpen && (
                                     <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-50">
-                                        <button
-                                            onClick={() => {
-                                                navigate('/booking-history');
-                                                setIsProfileOpen(false);
-                                            }}
-                                            className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-blue-50 w-full text-left"
-                                        >
-                                            <CreditCard size={16} />
-                                            Booking History
-                                        </button>
+                                        {/* Booking History - Only show for attendee users */}
+                                        {currentUserType === 'attendee' && (
+                                            <button
+                                                onClick={() => {
+                                                    navigate('/booking-history');
+                                                    setIsProfileOpen(false);
+                                                }}
+                                                className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-blue-50 w-full text-left rounded-t-xl"
+                                            >
+                                                <CreditCard size={16} />
+                                                Booking History
+                                            </button>
+                                        )}
+                                        
+                                        {/* Settings */}
                                         <button
                                             onClick={() => {
                                                 navigate('/user-profile');
                                                 setIsProfileOpen(false);
                                             }}
-                                            className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-blue-50 w-full text-left"
+                                            className={`flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-blue-50 w-full text-left ${currentUserType === 'attendee' ? '' : 'rounded-t-xl'}`}
                                         >
                                             <Settings size={16} />
                                             Settings
                                         </button>
+                                        
+                                        {/* Logout */}
                                         <button
                                             onClick={handleLogout}
                                             className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-blue-50 w-full text-left rounded-b-xl"
@@ -514,15 +521,19 @@ const Header = ({ userType = 'guest' }) => {
                         <div className="pt-4 border-t border-gray-200 space-y-2">
                             {isLoggedIn ? (
                                 <div className="space-y-2">
-                                    <button 
-                                        onClick={() => {
-                                            setIsMobileMenuOpen(false);
-                                            navigate('/booking-history');
-                                        }}
-                                        className="block w-full text-left p-3 sm:p-4 rounded-xl text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
-                                    >
-                                        Booking History
-                                    </button>
+                                    {/* Booking History - Only show for attendee users */}
+                                    {currentUserType === 'attendee' && (
+                                        <button 
+                                            onClick={() => {
+                                                setIsMobileMenuOpen(false);
+                                                navigate('/booking-history');
+                                            }}
+                                            className="block w-full text-left p-3 sm:p-4 rounded-xl text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
+                                        >
+                                            Booking History
+                                        </button>
+                                    )}
+                                    
                                     <button 
                                         onClick={() => {
                                             setIsMobileMenuOpen(false);
