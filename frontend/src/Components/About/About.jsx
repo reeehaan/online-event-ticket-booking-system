@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Calendar, 
   Shield, 
@@ -14,6 +15,12 @@ import {
 } from 'lucide-react';
 
 const AboutPage = () => {
+
+const navigate = useNavigate();
+
+const handleContactUsClick = () =>{
+  navigate('/contact')
+}
   const features = [
     {
       icon: <Calendar className="w-6 h-6" />,
@@ -209,7 +216,9 @@ const AboutPage = () => {
               Browse Events
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
             </button>
-            <button className="border-2 border-white text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-white hover:text-blue-600 transition-colors duration-300">
+            <button 
+            onClick={handleContactUsClick}
+            className="border-2 border-white text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-white hover:text-blue-600 transition-colors duration-300">
               Contact Us
             </button>
           </div>
