@@ -87,9 +87,9 @@ const formatEventTime = (timeStr) => {
     return `${displayHour}:${minutes} ${ampm}`;
 };
 
-// Replace the isEventAvailable function with this updated version:
 
-// Helper function to check if event is available for purchase
+
+
 const isEventAvailable = (event) => {
     // Check if event status allows purchasing
     if (event.status === 'canceled' || event.status === 'completed' || event.status === 'sold-out') {
@@ -107,7 +107,7 @@ const isEventAvailable = (event) => {
     
     // Check if at least ONE ticket is active AND has available quantity
     const hasAvailableTickets = event.tickets.some(ticket => {
-        // Check if ticket status is active
+       
         const isActive = ticket.status === 'active';
         
         // Check if ticket has remaining quantity
@@ -379,12 +379,12 @@ const EventCard = ({ event, showDiscount = false }) => {
 
 if (loading) {
 return (
-    <div className="min-h-screen bg-white flex items-center justify-center">
-    <div className="text-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
-        <p className="text-gray-600">Loading events...</p>
-    </div>
-    </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading events...</p>
+        </div>
+      </div>
 );
 }
 

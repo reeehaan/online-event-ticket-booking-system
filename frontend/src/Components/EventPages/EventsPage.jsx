@@ -225,10 +225,12 @@ return (
 
     {/* Loading Spinner */}
     {isLoading ? (
-    <div className="text-center py-20 text-gray-600">
-        <div className="text-2xl font-semibold mb-4">Loading events...</div>
-        <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-blue-600 border-opacity-50 mx-auto"></div>
-    </div>
+     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading events...</p>
+        </div>
+      </div>
     ) : (
     <div className="max-w-9xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="mb-6">
