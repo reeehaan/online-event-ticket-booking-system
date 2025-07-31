@@ -61,7 +61,7 @@ const purchaseSchema = new mongoose.Schema({
     },
     paymentMethod: {
         type: String,
-        enum: ['visa_master', 'koko', 'other'], // Match your frontend values
+        enum: ['visa_master', 'koko', 'other'], 
         default: 'visa_master'
     },
     paymentTransactionId: String,
@@ -148,10 +148,8 @@ const purchaseSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Indexes for better performance
+
 purchaseSchema.index({ userId: 1, eventId: 1 });
-purchaseSchema.index({ orderReference: 1 });
-purchaseSchema.index({ qrCode: 1 });
 purchaseSchema.index({ paymentOrderId: 1 });
 purchaseSchema.index({ 'userInfo.email': 1 });
 

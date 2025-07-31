@@ -1,7 +1,11 @@
 const Event = require('../Models/Event');
 
+const Purchase = require('../Models/Purchase');
 
 const Ticket = require('../Models/Ticket');
+
+const mongoose = require('mongoose'); 
+const { ObjectId } = mongoose.Types;
 
 const getAllEvents = async (req, res) => {
     try {
@@ -152,9 +156,173 @@ const getRecentEvents = async (req, res) => {
     }
 };
 
+//Get user's booking history
+const getBookingHistory = async (req, res) => {
+    try {
+        const userId = req.user._id; 
+        const { status, limit = 10, page = 1 } = req.query;
+
+        
+        let query = { userId };
+        if (status) {
+            query.paymentStatus = status;
+        }
+
+        
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        // Get purchases with populated event data
+        const purchases = await Purchase.find(query)
+            .populate({
+                path: 'eventId',
+                select: 'title description date venue status',
+                populate: {
+                    path: 'createdBy',
+                    select: 'firstName lastName organizationName'
+                }
+            })
+            .sort({ purchaseDate: -1 })
+            .limit(parseInt(limit))
+            .skip(skip);
+
+        // Get total count for pagination
+        const totalCount = await Purchase.countDocuments(query);
+
+        // Transform data for frontend
+        const transformedPurchases = purchases.map(purchase => {
+            return {
+                _id: purchase._id,
+                orderReference: purchase.orderReference,
+                qrCodeData: {
+                    qrCodeString: purchase.qrCode,
+                    totalTickets: purchase.tickets.reduce((sum, ticket) => sum + ticket.quantity, 0),
+                    userInfo: {
+                        name: `${purchase.userInfo.firstName} ${purchase.userInfo.lastName}`,
+                        email: purchase.userInfo.email,
+                        phone: purchase.userInfo.phoneNo
+                    },
+                    orderRef: purchase.orderReference,
+                    eventId: purchase.eventId?._id,
+                    userId: purchase.userId,
+                    totalAmount: purchase.totalAmount
+                },
+                event: purchase.eventId ? {
+                    _id: purchase.eventId._id,
+                    name: purchase.eventId.title,
+                    date: purchase.eventId.date,
+                    venue: purchase.eventId.venue,
+                    organizer: purchase.eventId.createdBy
+                } : null,
+                tickets: purchase.tickets,
+                totalAmount: purchase.totalAmount,
+                subtotalAmount: purchase.subtotalAmount,
+                purchaseDate: purchase.purchaseDate,
+                status: purchase.status,
+                paymentStatus: purchase.paymentStatus,
+                paymentMethod: purchase.paymentMethod,
+                paymentTransactionId: purchase.paymentTransactionId,
+                isValidated: purchase.isValidated,
+                validatedAt: purchase.validatedAt
+            };
+        });
+
+        res.json({
+            success: true,
+            message: 'Booking history retrieved successfully',
+            data: {
+                purchases: transformedPurchases,
+                pagination: {
+                    currentPage: parseInt(page),
+                    totalPages: Math.ceil(totalCount / parseInt(limit)),
+                    totalCount,
+                    hasNext: skip + purchases.length < totalCount,
+                    hasPrev: parseInt(page) > 1
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('Error fetching booking history:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error while retrieving booking history'
+        });
+    }
+};
+
+
+
+
+//Get purchase statistics for user
+const getBookingStats = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const stats = await Purchase.aggregate([
+            { $match: { userId: new ObjectId(userId) } },
+            {
+                $group: {
+                    _id: null,
+                    totalBookings: { $sum: 1 },
+                    totalSpent: { $sum: '$totalAmount' },
+                    totalTickets: { $sum: { $sum: '$tickets.quantity' } },
+                    completedBookings: {
+                        $sum: {
+                            $cond: [{ $eq: ['$paymentStatus', 'completed'] }, 1, 0]
+                        }
+                    },
+                    pendingBookings: {
+                        $sum: {
+                            $cond: [{ $eq: ['$paymentStatus', 'pending'] }, 1, 0]
+                        }
+                    },
+                    upcomingEvents: {
+                        $sum: {
+                            $cond: [
+                                { 
+                                    $and: [
+                                        { $eq: ['$paymentStatus', 'completed'] },
+                                        { $eq: ['$status', 'active'] }
+                                    ]
+                                }, 
+                                1, 
+                                0
+                            ]
+                        }
+                    }
+                }
+            }
+        ]);
+
+        const userStats = stats.length > 0 ? stats[0] : {
+            totalBookings: 0,
+            totalSpent: 0,
+            totalTickets: 0,
+            completedBookings: 0,
+            pendingBookings: 0,
+            upcomingEvents: 0
+        };
+
+        res.json({
+            success: true,
+            message: 'Booking statistics retrieved successfully',
+            data: userStats
+        });
+
+    } catch (error) {
+        console.error('Error fetching booking stats:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error while retrieving booking statistics'
+        });
+    }
+};
+
 
 module.exports = {
     getAllEvents,
     getEventsByCategory,
-    getRecentEvents
+    getRecentEvents,
+    getBookingHistory,
+    getBookingStats,
 };
