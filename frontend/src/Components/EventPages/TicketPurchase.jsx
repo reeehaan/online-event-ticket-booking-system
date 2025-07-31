@@ -719,7 +719,7 @@ const TicketPurchase = ({ eventId, onClose, onPurchaseComplete }) => {
                                                 <span>{subtotal.toLocaleString()} LKR</span>
                                             </div>
                                             <div className="flex justify-between text-sm">
-                                                <span>Convenience Fee (1%)</span>
+                                                <span>Convenience Fee (2%)</span>
                                                 <span>+ {convenienceFee.toLocaleString()} LKR</span>
                                             </div>
                                             <div className="flex justify-between font-bold text-lg pt-2 border-t">
