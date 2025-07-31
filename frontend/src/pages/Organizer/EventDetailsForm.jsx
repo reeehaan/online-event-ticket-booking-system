@@ -13,6 +13,7 @@ FileText
 } from 'lucide-react';
 
 const EventDetailsForm = ({ eventData, setEventData, onNext }) => {
+// eslint-disable-next-line no-unused-vars
 const [image, setImage] = useState(null);
 const [previewURL, setPreviewURL] = useState(null);
 const [errors, setErrors] = useState({});
@@ -256,7 +257,7 @@ return (
     </div>
 
     {/* Image Upload Section */}
-    <div className="space-y-4">
+    <div className="space-y-7">
         <label className="flex items-center gap-2 text-lg font-semibold text-gray-700">
         <ImagePlus size={20} className="text-purple-600" />
         Event Image
