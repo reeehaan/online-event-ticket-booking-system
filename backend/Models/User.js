@@ -43,7 +43,7 @@ const userSchema = new mongoose.Schema({
 // Create base User model
 const User = mongoose.model('User', userSchema);
 
-// Attendee-specific schema (only form fields)
+
 const attendeeSchema = new mongoose.Schema({
     dateOfBirth: {
     type: Date,
