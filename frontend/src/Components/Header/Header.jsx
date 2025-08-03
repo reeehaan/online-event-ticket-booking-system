@@ -116,6 +116,18 @@ const Header = ({ userType = 'guest' }) => {
         fetchRecentEvents();
     }, []);
 
+    const handleRecentEventClick = (event) => {
+    // Close all dropdowns and menus
+    setHoveredItem(null);
+    setIsMobileMenuOpen(false);
+    setExpandedMobileCategory(null);
+    
+    // Navigate to event details page with event data
+    navigate(`/event-details/${event._id}`, {
+        state: { event }
+    });
+};
+
     // Navigation items for different user types
     const getNavigationItems = () => {
         const navItems = {
@@ -434,7 +446,10 @@ const Header = ({ userType = 'guest' }) => {
                                 </div>
                             ) : (
                                 recentEvents.map((event, idx) => (
-                                    <div key={idx} className="group bg-white hover:bg-gradient-to-r hover:from-blue-25 hover:to-purple-25 border border-gray-100 hover:border-blue-200 rounded-2xl p-3 xl:p-4 transition-all duration-300 hover:shadow-lg cursor-pointer">
+                                    <div 
+                                    key={idx} 
+                                    onClick={() => handleRecentEventClick(event)}
+                                    className="group bg-white hover:bg-gradient-to-r hover:from-blue-25 hover:to-purple-25 border border-gray-100 hover:border-blue-200 rounded-2xl p-3 xl:p-4 transition-all duration-300 hover:shadow-lg cursor-pointer">
                                         <div className="flex gap-3 xl:gap-4">
                                             <div className="relative overflow-hidden rounded-xl flex-shrink-0">
                                                 <img 
