@@ -10,6 +10,7 @@ const user = require("./Routes/user-route");
 const organizer = require("./Routes/organizer-route.js");
 const attendee = require("./Routes/attendee-route.js")
 const ticketRoutes = require('./Routes/ticket-purchase-route.js');
+const attendeeProfileRoutes = require('./Routes/attendee-profile-route.js');
 //body-parser
 // app.use(express.json());
 
@@ -31,6 +32,8 @@ app.use('/api/org',organizer);
 app.use('/api/attendee',attendee);
 //ticket and payhere 
 app.use('/api/attendee/ticket', ticketRoutes);
+
+app.use('/api/attendee-profile', attendeeProfileRoutes);
 
 
 
