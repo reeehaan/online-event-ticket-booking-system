@@ -124,35 +124,42 @@ const getEventsByCategory = async (req, res) => {
 const getRecentEvents = async (req, res) => {
     try {
         const recentEvents = await Event.find()
-        .sort({ createdAt: -1 })
-        .limit(3);
+            .sort({ createdAt: -1 })
+            .limit(3);
 
-    const eventsWithTickets = await Promise.all(
-        recentEvents.map(async (event) => {
-        const firstTicket = await Ticket.findOne({
-            eventId: event._id,
-            status: 'active'
-        })
-            .select('price')
-            .sort({ createdAt: 1 }); 
+        const eventsWithTickets = await Promise.all(
+            recentEvents.map(async (event) => {
+                // Get the first ticket price for display
+                const firstTicket = await Ticket.findOne({
+                    eventId: event._id,
+                    status: 'active'
+                })
+                .select('price currency')
+                .sort({ createdAt: 1 }); 
 
-        return {
-            ...event.toObject(),
-            firstTicketPrice: firstTicket ? firstTicket.price : null
-        };
-        })
-    );
+                // Get ALL tickets for this event
+                const allTickets = await Ticket.find({
+                    eventId: event._id
+                });
 
-    res.status(200).json({
-        success: true,
-        data: eventsWithTickets
-    });
+                return {
+                    ...event.toObject(),
+                    firstTicketPrice: firstTicket ? `${firstTicket.currency} ${firstTicket.price}` : 'TBD',
+                    tickets: allTickets 
+                };
+            })
+        );
+
+        res.status(200).json({
+            success: true,
+            data: eventsWithTickets
+        });
     } catch (error) {
-    console.error('Error fetching recent events:', error);
-    res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-    });
+        console.error('Error fetching recent events:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
     }
 };
 
