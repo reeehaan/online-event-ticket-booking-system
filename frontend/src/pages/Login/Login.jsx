@@ -61,6 +61,9 @@ try {
     localStorage.setItem("userType", userType);
     localStorage.setItem("fullName", fullname);
 
+    // Notify other components about the login                                                                                                 │ │
+    window.dispatchEvent(new CustomEvent('localStorageUpdate'));
+
     // Navigate based on userType
     if (userType === "organizer") {
     navigate("/organizer-dashboard", { replace: true });
