@@ -1,48 +1,171 @@
-import React, { useState} from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
+import axios from 'axios';
 
 const OrganizerLandingPage = () => {
 const [activeTimeframe, setActiveTimeframe] = useState('7D');
 const navigate = useNavigate();
 
+// State for real data
+const [stats, setStats] = useState([]);
+const [revenueData, setRevenueData] = useState([]);
+const [ticketTypeData, setTicketTypeData] = useState([]);
+const [salesTrendData, setSalesTrendData] = useState([]);
+const [sourceData, setSourceData] = useState([]);
+const [recentEvents, setRecentEvents] = useState([]);
+const [eventPerformance, setEventPerformance] = useState([]);
+const [loading, setLoading] = useState(true);
+const [error, setError] = useState(null);
 
-const revenueData = [
-{ month: 'Jan', revenue: 12000 },
-{ month: 'Feb', revenue: 19000 },
-{ month: 'Mar', revenue: 15000 },
-{ month: 'Apr', revenue: 25000 },
-{ month: 'May', revenue: 22000 },
-{ month: 'Jun', revenue: 30000 },
-{ month: 'Jul', revenue: 28000 }
-];
+const API_BASE_URL = 'http://localhost:3000/api/org/dashboard';
 
-const ticketTypeData = [
-{ name: 'VIP', value: 15, color: '#6366f1' },
-{ name: 'Premium', value: 30, color: '#8b5cf6' },
-{ name: 'Regular', value: 45, color: '#06b6d4' },
-{ name: 'Student', value: 10, color: '#10b981' }
-];
+// API calls
+const fetchDashboardStats = async () => {
+  try {
+    const token = localStorage.getItem('authToken');
+    const response = await axios.get(`${API_BASE_URL}/stats`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    setStats(response.data.stats || []);
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error);
+    setError('Failed to fetch dashboard statistics');
+  }
+};
 
-const salesTrendData = [
-{ week: 'Week 1', sales: 120 },
-{ week: 'Week 2', sales: 190 },
-{ week: 'Week 3', sales: 300 },
-{ week: 'Week 4', sales: 250 }
-];
+const fetchRevenueData = async (timeframe) => {
+  try {
+    const token = localStorage.getItem('authToken');
+    const response = await axios.get(`${API_BASE_URL}/revenue`, {
+      params: { timeframe },
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    setRevenueData(response.data.revenueData || []);
+  } catch (error) {
+    console.error('Error fetching revenue data:', error);
+    setError('Failed to fetch revenue data');
+  }
+};
 
-const sourceData = [
-{ source: 'Direct', value: 40, color: '#f59e0b' },
-{ source: 'Social', value: 25, color: '#ef4444' },
-{ source: 'Email', value: 20, color: '#8b5cf6' },
-{ source: 'Referral', value: 15, color: '#06b6d4' }
-];
+const fetchOrganizerEvents = async () => {
+  try {
+    const token = localStorage.getItem('authToken');
+    const response = await axios.get(`${API_BASE_URL}/events`, {
+      params: { limit: 10 },
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    setRecentEvents(response.data.events || []);
+  } catch (error) {
+    console.error('Error fetching events:', error);
+    setError('Failed to fetch events');
+  }
+};
 
-const recentEvents = [
-{ id: 1, name: 'Tech Summit 2024', date: 'Dec 15, 2024', attendees: 245, status: 'Active', image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80' },
-{ id: 2, name: 'Music Festival', date: 'Dec 20, 2024', attendees: 1200, status: 'Upcoming', image: 'https://images.unsplash.com/photo-1511578314322-379afb476865?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80' },
-{ id: 3, name: 'Business Conference', date: 'Dec 10, 2024', attendees: 89, status: 'Completed', image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80' }
-];
+const fetchTicketTypeData = async () => {
+  try {
+    const token = localStorage.getItem('authToken');
+    const response = await axios.get(`${API_BASE_URL}/ticket-types`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    setTicketTypeData(response.data.ticketTypes || []);
+  } catch (error) {
+    console.error('Error fetching ticket type data:', error);
+    setError('Failed to fetch ticket type data');
+  }
+};
+
+const fetchSalesTrendData = async () => {
+  try {
+    const token = localStorage.getItem('authToken');
+    const response = await axios.get(`${API_BASE_URL}/sales-trend`, {
+      params: { period: '30D' },
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    setSalesTrendData(response.data.salesTrend || []);
+  } catch (error) {
+    console.error('Error fetching sales trend data:', error);
+    setError('Failed to fetch sales trend data');
+  }
+};
+
+const fetchTrafficSourcesData = async () => {
+  try {
+    const token = localStorage.getItem('authToken');
+    const response = await axios.get(`${API_BASE_URL}/traffic-sources`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    setSourceData(response.data.trafficSources || []);
+  } catch (error) {
+    console.error('Error fetching traffic sources data:', error);
+    setError('Failed to fetch traffic sources data');
+  }
+};
+
+const fetchEventPerformance = async () => {
+  try {
+    const token = localStorage.getItem('authToken');
+    const response = await axios.get(`${API_BASE_URL}/event-performance`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    setEventPerformance(response.data.performance || []);
+  } catch (error) {
+    console.error('Error fetching event performance data:', error);
+    setError('Failed to fetch event performance data');
+  }
+};
+
+// useEffect to fetch all data on component mount
+useEffect(() => {
+  const fetchAllData = async () => {
+    setLoading(true);
+    try {
+      await Promise.all([
+        fetchDashboardStats(),
+        fetchRevenueData(activeTimeframe),
+        fetchOrganizerEvents(),
+        fetchTicketTypeData(),
+        fetchSalesTrendData(),
+        fetchTrafficSourcesData(),
+        fetchEventPerformance()
+      ]);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchAllData();
+}, []);
+
+// Fetch revenue data when timeframe changes
+useEffect(() => {
+  if (!loading) {
+    fetchRevenueData(activeTimeframe);
+  }
+}, [activeTimeframe]);
 
 const getStatusBadge = (status) => {
 const statusConfig = {
@@ -55,17 +178,47 @@ return statusConfig[status] || statusConfig['Completed'];
 
 
 
-const stats = [
-{ title: 'Total Events', value: '42', change: '+12%', changeType: 'positive', icon: '📅', color: 'indigo' },
-{ title: 'Tickets Sold', value: '1,247', change: '+8%', changeType: 'positive', icon: '🎫', color: 'green' },
-{ title: 'Total Revenue', value: '$89,432', change: '+15%', changeType: 'positive', icon: '💰', color: 'purple' },
-{ title: 'Active Events', value: '8', change: '2 ending soon', changeType: 'neutral', icon: '▶️', color: 'orange' }
+// Default stats structure for fallback
+const defaultStats = [
+{ title: 'Total Events', value: '0', change: '+0%', changeType: 'neutral', icon: '📅', color: 'indigo' },
+{ title: 'Tickets Sold', value: '0', change: '+0%', changeType: 'neutral', icon: '🎫', color: 'green' },
+{ title: 'Total Revenue', value: 'LKR0', change: '+0%', changeType: 'neutral', icon: '💰', color: 'purple' },
+{ title: 'Active Events', value: '0', change: 'No events', changeType: 'neutral', icon: '▶️', color: 'orange' }
 ];
 
 const fullname = localStorage.getItem('fullName');
 
 function navigateCreateEvent(){
     navigate('/organizer-create-event');
+}
+
+if (loading) {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 mt-10 flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600 mx-auto"></div>
+        <p className="mt-4 text-lg text-gray-600">Loading dashboard...</p>
+      </div>
+    </div>
+  );
+}
+
+if (error) {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 mt-10 flex items-center justify-center">
+      <div className="text-center">
+        <div className="text-red-500 text-6xl mb-4">⚠️</div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Error Loading Dashboard</h2>
+        <p className="text-gray-600 mb-4">{error}</p>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700"
+        >
+          Retry
+        </button>
+      </div>
+    </div>
+  );
 }
 
 return (
@@ -89,7 +242,7 @@ return (
     <main className="p-6 space-y-6">
     {/* Stats Cards */}
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
+        {(stats.length > 0 ? stats : defaultStats).map((stat, index) => (
         <div key={index} className="bg-white/60 backdrop-blur-lg p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-white/20">
             <div className="flex items-center justify-between">
             <div>
@@ -141,7 +294,7 @@ return (
             </div>
         </div>
         <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={revenueData}>
+            <LineChart data={revenueData.length > 0 ? revenueData : [{ month: 'No Data', revenue: 0 }]}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis dataKey="month" stroke="#666" />
             <YAxis stroke="#666" />
@@ -198,12 +351,12 @@ return (
             </button>
         </div>
         <div className="space-y-4">
-            {recentEvents.map((event) => {
+            {recentEvents.length > 0 ? recentEvents.map((event) => {
             const statusStyle = getStatusBadge(event.status);
             return (
                 <div key={event.id} className="flex items-center space-x-4 p-4 bg-white/50 backdrop-blur-sm rounded-xl hover:bg-white/70 transition-all duration-300">
                 <img 
-                    src={event.image} 
+                    src={event.image || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80'} 
                     alt={event.name} 
                     className="w-14 h-14 rounded-xl object-cover shadow-md"
                 />
@@ -221,7 +374,13 @@ return (
                 </div>
                 </div>
             );
-            })}
+            }) : (
+                <div className="text-center py-8">
+                    <div className="text-gray-400 text-4xl mb-2">📅</div>
+                    <p className="text-gray-500">No events found</p>
+                    <p className="text-sm text-gray-400">Create your first event to get started</p>
+                </div>
+            )}
         </div>
         </div>
 
@@ -234,36 +393,27 @@ return (
             </button>
         </div>
         <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-white/50 backdrop-blur-sm rounded-xl">
-            <div className="flex items-center space-x-3">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="text-sm font-medium text-gray-900">Tech Summit 2024</span>
-            </div>
-            <div className="text-right">
-                <p className="text-sm font-semibold text-gray-900">94%</p>
-                <p className="text-xs text-gray-500">Sold out</p>
-            </div>
-            </div>
-            <div className="flex items-center justify-between p-4 bg-white/50 backdrop-blur-sm rounded-xl">
-            <div className="flex items-center space-x-3">
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                <span className="text-sm font-medium text-gray-900">Music Festival</span>
-            </div>
-            <div className="text-right">
-                <p className="text-sm font-semibold text-gray-900">85%</p>
-                <p className="text-xs text-gray-500">Selling fast</p>
-            </div>
-            </div>
-            <div className="flex items-center justify-between p-4 bg-white/50 backdrop-blur-sm rounded-xl">
-            <div className="flex items-center space-x-3">
-                <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                <span className="text-sm font-medium text-gray-900">Business Conference</span>
-            </div>
-            <div className="text-right">
-                <p className="text-sm font-semibold text-gray-900">67%</p>
-                <p className="text-xs text-gray-500">On track</p>
-            </div>
-            </div>
+            {eventPerformance.length > 0 ? eventPerformance.map((event, index) => (
+                <div key={index} className="flex items-center justify-between p-4 bg-white/50 backdrop-blur-sm rounded-xl">
+                <div className="flex items-center space-x-3">
+                    <div className={`w-3 h-3 rounded-full ${
+                        event.percentage >= 90 ? 'bg-green-500' :
+                        event.percentage >= 70 ? 'bg-blue-500' :
+                        event.percentage >= 50 ? 'bg-orange-500' : 'bg-red-500'
+                    }`}></div>
+                    <span className="text-sm font-medium text-gray-900">{event.name}</span>
+                </div>
+                <div className="text-right">
+                    <p className="text-sm font-semibold text-gray-900">{event.percentage}%</p>
+                    <p className="text-xs text-gray-500">{event.status}</p>
+                </div>
+                </div>
+            )) : (
+                <div className="text-center py-8">
+                    <div className="text-gray-400 text-4xl mb-2">📊</div>
+                    <p className="text-gray-500">No performance data available</p>
+                </div>
+            )}
         </div>
         </div>
     </div>
@@ -284,7 +434,7 @@ return (
             <ResponsiveContainer width="100%" height={200}>
             <PieChart>
                 <Pie
-                data={ticketTypeData}
+                data={ticketTypeData.length > 0 ? ticketTypeData : [{ name: 'No Data', value: 1, color: '#e5e7eb' }]}
                 cx="50%"
                 cy="50%"
                 innerRadius={40}
@@ -292,7 +442,7 @@ return (
                 paddingAngle={5}
                 dataKey="value"
                 >
-                {ticketTypeData.map((entry, index) => (
+                {(ticketTypeData.length > 0 ? ticketTypeData : [{ name: 'No Data', value: 1, color: '#e5e7eb' }]).map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
                 </Pie>
@@ -303,7 +453,7 @@ return (
         <div className="text-center">
             <h4 className="text-sm font-medium text-gray-900 mb-4">Sales Trend</h4>
             <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={salesTrendData}>
+            <LineChart data={salesTrendData.length > 0 ? salesTrendData : [{ week: 'No Data', sales: 0 }]}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="week" stroke="#666" />
                 <YAxis stroke="#666" />
@@ -321,7 +471,7 @@ return (
         <div className="text-center">
             <h4 className="text-sm font-medium text-gray-900 mb-4">Traffic Sources</h4>
             <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={sourceData}>
+            <BarChart data={sourceData.length > 0 ? sourceData : [{ source: 'No Data', value: 0 }]}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="source" stroke="#666" />
                 <YAxis stroke="#666" />
