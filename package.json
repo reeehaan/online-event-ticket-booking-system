@@ -1,0 +1,36 @@
+{
+  "name": "online-event-ticket-booking-system",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Online Event Ticket Booking System",
+  "scripts": {
+    "prepare": "husky",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "lint:frontend": "cd frontend && npm run lint",
+    "build:frontend": "cd frontend && npm run build"
+  },
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.4"
+  },
+  "lint-staged": {
+    "frontend/**/*.{js,jsx,ts,tsx}": [
+      "cd frontend && npx prettier --write",
+      "cd frontend && npx eslint --fix"
+    ],
+    "frontend/**/*.{css,scss,md,json}": [
+      "cd frontend && npx prettier --write"
+    ],
+    "backend/**/*.{js,ts}": [
+      "cd backend && npx prettier --write"
+    ],
+    "backend/**/*.{json,md}": [
+      "cd backend && npx prettier --write"
+    ]
+  }
+}
