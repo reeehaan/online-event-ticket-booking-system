@@ -4,8 +4,10 @@
 
 
 @theme {
-/* Font Configuration */
+/* Font Configuration - Professional Typography */
 --font-*: initial;
+--font-roboto: Roboto, sans-serif;
+--font-source-sans: "Source Sans Pro", sans-serif;
 --font-outfit: Outfit, sans-serif;
 --font-inter: Inter, sans-serif;
 
@@ -205,7 +207,7 @@ border-color: var(--color-gray-200);
 }
 
 body {
-@apply bg-gray-50 font-outfit text-gray-900 antialiased;
+@apply bg-gray-50 font-source-sans text-gray-900 antialiased;
 }
 
 button:not(:disabled),
@@ -246,7 +248,7 @@ height: 6px;
 }
 
 @utility event-title {
-@apply text-xl font-semibold text-gray-900 line-clamp-2;
+@apply text-xl font-roboto font-semibold text-gray-900 line-clamp-2 tracking-tight;
 }
 
 @utility event-date {
@@ -284,19 +286,19 @@ height: 6px;
 
 /* Buttons */
 @utility btn-primary {
-@apply bg-primary-600 hover:bg-primary-700 text-white font-medium py-3 px-6 rounded-xl transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+@apply bg-primary-600 hover:bg-primary-700 text-white font-roboto font-medium tracking-wide py-3 px-6 rounded-xl transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
 }
 
 @utility btn-secondary {
-@apply bg-white hover:bg-gray-50 text-primary-600 font-medium py-3 px-6 rounded-xl border border-primary-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+@apply bg-white hover:bg-gray-50 text-primary-600 font-roboto font-medium tracking-wide py-3 px-6 rounded-xl border border-primary-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
 }
 
 @utility btn-outline {
-@apply bg-transparent hover:bg-primary-50 text-primary-600 font-medium py-3 px-6 rounded-xl border border-primary-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+@apply bg-transparent hover:bg-primary-50 text-primary-600 font-roboto font-medium tracking-wide py-3 px-6 rounded-xl border border-primary-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
 }
 
 @utility btn-ghost {
-@apply bg-transparent hover:bg-primary-50 text-primary-600 font-medium py-3 px-6 rounded-xl transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+@apply bg-transparent hover:bg-primary-50 text-primary-600 font-roboto font-medium tracking-wide py-3 px-6 rounded-xl transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
 }
 
 /* Form Elements */
@@ -318,11 +320,11 @@ height: 6px;
 
 /* Navigation */
 @utility nav-link {
-@apply text-gray-700 hover:text-primary-600 font-medium transition-colors duration-200 px-3 py-2 rounded-lg hover:bg-primary-50;
+@apply text-gray-700 hover:text-primary-600 font-roboto font-medium transition-colors duration-200 px-3 py-2 rounded-lg hover:bg-primary-50;
 }
 
 @utility nav-link-active {
-@apply text-primary-600 bg-primary-50 font-medium px-3 py-2 rounded-lg;
+@apply text-primary-600 bg-primary-50 font-roboto font-medium px-3 py-2 rounded-lg;
 }
 
 /* Search and Filter Components */
@@ -482,4 +484,29 @@ animation: slideInRight 0.6s ease-out;
 
 @utility hover-glow {
 @apply transition-shadow duration-300 hover:shadow-2xl hover:shadow-primary-500/25;
+}
+
+/* Professional Typography System */
+@utility text-heading {
+@apply font-roboto font-bold tracking-tight;
+}
+
+@utility text-subheading {
+@apply font-roboto font-semibold tracking-tight;
+}
+
+@utility text-body {
+@apply font-source-sans;
+}
+
+@utility text-body-semibold {
+@apply font-source-sans font-semibold;
+}
+
+@utility text-caption {
+@apply font-source-sans text-sm;
+}
+
+@utility text-button {
+@apply font-roboto font-medium tracking-wide;
 }
