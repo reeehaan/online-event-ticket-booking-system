@@ -133,6 +133,8 @@ function App() {
             </ProtectedRoute>
           } />
 
+           
+
           {/* Catch all route - redirect to appropriate page */}
           <Route path="*" element={<Navigate to="/" replace />} />
           
