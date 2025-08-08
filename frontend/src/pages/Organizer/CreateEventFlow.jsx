@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { CheckCircle, XCircle, X } from 'lucide-react';
 import EventDetailsForm from "./EventDetailsForm";
 import TicketCreationForm from "./TicketCreationForm";
 
@@ -29,6 +30,12 @@ const [tickets, setTickets] = useState([{
 }]);
 
 const [isSubmitting, setIsSubmitting] = useState(false);
+const [toast, setToast] = useState(null);
+
+const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+};
 
 const handleNext = () => {
     setCurrentStep(2);
@@ -69,7 +76,7 @@ try {
 const token = localStorage.getItem('authToken');
 
 if (!token) {
-    alert('❌ No token found. Please log in again.');
+    showToast('No token found. Please log in again.', 'error');
     setIsSubmitting(false);
     return;
 }
@@ -97,7 +104,7 @@ if (eventData.image && eventData.image instanceof File) {
     payload.image = base64Image;
     } catch (error) {
     console.error('Error converting image to base64:', error);
-    alert('Error processing image. Please try again.');
+    showToast('Error processing image. Please try again.', 'error');
     setIsSubmitting(false);
     return;
     }
@@ -117,7 +124,7 @@ const response = await axios.post(
 );
 
 console.log('✅ Event created:', response.data);
-alert('🎉 Event created successfully!');
+showToast('🎉 Event created successfully!', 'success');
 resetForm();
 
 } catch (error) {
@@ -125,11 +132,11 @@ console.error('Error creating event:', error);
 
 if (error.response) {
     const message = error.response.data?.message || 'Failed to create event';
-    alert(`Error: ${message}`);
+    showToast(message, 'error');
 } else if (error.request) {
-    alert('Error: No response from server. Please check your connection.');
+    showToast('No response from server. Please check your connection.', 'error');
 } else {
-    alert('Error creating event. Please try again.');
+    showToast('Error creating event. Please try again.', 'error');
 }
 
 } finally {
@@ -154,6 +161,32 @@ return (
         onSubmit={handleSubmit}
         isSubmitting={isSubmitting}
     />
+    )}
+
+    {/* Toast Notification */}
+    {toast && (
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
+            <div
+                className={`flex items-center gap-3 px-6 py-4 rounded-lg shadow-lg border ${
+                    toast.type === 'success'
+                        ? 'bg-green-50 border-green-200 text-green-800'
+                        : 'bg-red-50 border-red-200 text-red-800'
+                }`}
+            >
+                {toast.type === 'success' ? (
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                ) : (
+                    <XCircle className="w-5 h-5 text-red-600" />
+                )}
+                <span className="font-medium">{toast.message}</span>
+                <button 
+                    onClick={() => setToast(null)} 
+                    className="ml-2 hover:opacity-70 transition-opacity"
+                >
+                    <X className="w-4 h-4" />
+                </button>
+            </div>
+        </div>
     )}
     </div>
     );
