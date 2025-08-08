@@ -336,7 +336,11 @@ const Header = ({ userType = 'guest' }) => {
                                         {/* Settings */}
                                         <button
                                             onClick={() => {
-                                                navigate('/user-profile');
+                                                if (currentUserType === 'organizer') {
+                                                    navigate('/organizer-profile');
+                                                } else {
+                                                    navigate('/user-profile');
+                                                }
                                                 setIsProfileOpen(false);
                                             }}
                                             className={`flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-blue-50 w-full text-left ${currentUserType === 'attendee' ? '' : 'rounded-t-xl'}`}
@@ -552,7 +556,11 @@ const Header = ({ userType = 'guest' }) => {
                                     <button 
                                         onClick={() => {
                                             setIsMobileMenuOpen(false);
-                                            navigate('/user-profile');
+                                            if (currentUserType === 'organizer') {
+                                                navigate('/organizer-profile');
+                                            } else {
+                                                navigate('/user-profile');
+                                            }
                                         }}
                                         className="block w-full text-left p-3 sm:p-4 rounded-xl text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
                                     >
