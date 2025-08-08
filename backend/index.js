@@ -12,6 +12,7 @@ const attendee = require("./Routes/attendee-route.js")
 const ticketRoutes = require('./Routes/ticket-purchase-route.js');
 const attendeeProfileRoutes = require('./Routes/attendee-profile-route.js');
 const orgDashboardRoutes = require('./Routes/org-dashboard-route.js');
+const organizerProfileRoutes = require('./Routes/organizer-profile-route.js');
 //body-parser
 // app.use(express.json());
 
@@ -35,6 +36,8 @@ app.use('/api/attendee',attendee);
 app.use('/api/attendee/ticket', ticketRoutes);
 
 app.use('/api/attendee-profile', attendeeProfileRoutes);
+//organizer profile
+app.use('/api/organizer-profile', organizerProfileRoutes);
 //organizer dashboard
 app.use('/api/org/dashboard', orgDashboardRoutes);
 
