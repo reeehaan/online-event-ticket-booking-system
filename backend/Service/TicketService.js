@@ -485,12 +485,20 @@ const processPaymentSuccess = async (req, res) => {
         }
 
         if (purchase.paymentStatus === 'completed') {
+            // Generate QR data if missing (for older purchases)
+            if (!purchase.qrCodeData || !purchase.qrCodeData.qrCodeString) {
+                const eventData = purchase.eventId;
+                purchase.generateQRCodeData(eventData);
+                await purchase.save();
+            }
+            
             return res.status(200).json({
                 success: true,
                 message: 'Payment already processed',
                 data: {
                     orderReference: purchase.orderReference,
-                    qrCode: purchase.qrCode
+                    qrCode: purchase.qrCode,
+                    qrCodeData: purchase.qrCodeData
                 }
             });
         }
@@ -500,6 +508,10 @@ const processPaymentSuccess = async (req, res) => {
         purchase.paymentTransactionId = paymentTransactionId;
         purchase.payHereOrderId = payHereOrderId;
         purchase.status = 'active';
+
+        // Generate comprehensive QR code data with event information
+        const eventData = purchase.eventId;
+        purchase.generateQRCodeData(eventData);
 
         await purchase.save();
 
@@ -512,6 +524,7 @@ const processPaymentSuccess = async (req, res) => {
             data: {
                 orderReference: purchase.orderReference,
                 qrCode: purchase.qrCode,
+                qrCodeData: purchase.qrCodeData,
                 paymentStatus: purchase.paymentStatus,
                 event: purchase.eventId
             }
@@ -631,17 +644,27 @@ const getUserPurchases = async (req, res) => {
             .populate('eventId', 'title date venue image category')
             .sort({ createdAt: -1 })
             .skip(skip)
-            .limit(parseInt(limit))
-            .lean();
+            .limit(parseInt(limit));
 
         const total = await Purchase.countDocuments(query);
 
-        const purchasesWithSummary = purchases.map(purchase => ({
-            ...purchase,
-            totalTickets: purchase.tickets.reduce((sum, t) => sum + t.quantity, 0),
-            canCancel: purchase.paymentStatus === 'pending',
-            canUse: purchase.paymentStatus === 'completed' && !purchase.isValidated
-        }));
+        // Ensure QR data exists for completed purchases
+        const purchasesWithSummary = [];
+        for (const purchase of purchases) {
+            // Generate QR data if missing and payment is completed
+            if (purchase.paymentStatus === 'completed' && (!purchase.qrCodeData || !purchase.qrCodeData.qrCodeString)) {
+                const eventData = purchase.eventId;
+                purchase.generateQRCodeData(eventData);
+                await purchase.save();
+            }
+
+            purchasesWithSummary.push({
+                ...purchase.toObject(),
+                totalTickets: purchase.tickets.reduce((sum, t) => sum + t.quantity, 0),
+                canCancel: purchase.paymentStatus === 'pending',
+                canUse: purchase.paymentStatus === 'completed' && !purchase.isValidated
+            });
+        }
 
         res.status(200).json({
             success: true,
