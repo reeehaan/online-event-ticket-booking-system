@@ -138,19 +138,47 @@ const BookingHistory = () => {
     return `${baseURL}?${params.toString()}`;
   };
 
+  // Generate fallback QR data for purchases without proper QR codes
+  const generateFallbackQRData = (purchase) => {
+    const fallbackData = {
+      bookingId: purchase._id,
+      orderReference: purchase.orderReference,
+      customerName: `${purchase.userInfo?.firstName || ''} ${purchase.userInfo?.lastName || ''}`.trim(),
+      customerEmail: purchase.userInfo?.email || '',
+      customerPhone: purchase.userInfo?.phoneNo || '',
+      customerNIC: purchase.userInfo?.nicPassport || '',
+      eventTitle: purchase.eventId?.title || purchase.event?.title || 'Event',
+      eventDate: purchase.eventId?.date || purchase.event?.date || purchase.purchaseDate,
+      eventVenue: purchase.eventId?.venue || purchase.event?.venue || 'Venue TBA',
+      totalTickets: purchase.tickets?.reduce((sum, t) => sum + t.quantity, 0) || 0,
+      totalAmount: purchase.totalAmount || 0,
+      paymentStatus: purchase.paymentStatus || 'pending',
+      purchaseDate: purchase.purchaseDate,
+      ticketDetails: purchase.tickets?.map(ticket => ({
+        ticketType: ticket.ticketName,
+        quantity: ticket.quantity,
+        price: ticket.pricePerTicket
+      })) || []
+    };
+    
+    return JSON.stringify(fallbackData);
+  };
+
   // Share QR Code
   const shareQRCode = async (purchase) => {
     try {
+      const qrData = purchase.qrCodeData?.qrCodeString || generateFallbackQRData(purchase);
+      
       if (navigator.share) {
         // Use Web Share API if available (mobile devices)
         await navigator.share({
-          title: `Ticket for ${purchase.event?.name || 'Event'}`,
-          text: `My ticket QR code for ${purchase.event?.name || 'the event'}`,
-          url: generateQRCodeURL(purchase.qrCodeData?.qrCodeString || 'fallback-qr-data', 300)
+          title: `Ticket for ${purchase.eventId?.title || purchase.event?.title || 'Event'}`,
+          text: `My ticket QR code for ${purchase.eventId?.title || purchase.event?.title || 'the event'}`,
+          url: generateQRCodeURL(qrData, 300)
         });
       } else {
         // Fallback: Copy QR code URL to clipboard
-        const qrURL = generateQRCodeURL(purchase.qrCodeData?.qrCodeString || 'fallback-qr-data', 300);
+        const qrURL = generateQRCodeURL(qrData, 300);
         await navigator.clipboard.writeText(qrURL);
         alert('QR code link copied to clipboard!');
       }
@@ -158,7 +186,8 @@ const BookingHistory = () => {
       console.error('Error sharing QR code:', error);
       // Additional fallback: just copy the QR data
       try {
-        await navigator.clipboard.writeText(purchase.qrCodeData?.qrCodeString || purchase.orderReference);
+        const qrData = purchase.qrCodeData?.qrCodeString || generateFallbackQRData(purchase);
+        await navigator.clipboard.writeText(qrData);
         alert('QR code data copied to clipboard!');
       } catch (clipboardError) {
         console.error('Clipboard error:', clipboardError);
@@ -170,7 +199,8 @@ const BookingHistory = () => {
   const downloadQRCode = async (purchase) => {
     try {
       setDownloadingQR(purchase._id);
-      const qrCodeURL = generateQRCodeURL(purchase.qrCodeData?.qrCodeString || 'fallback-qr-data', 300);
+      const qrData = purchase.qrCodeData?.qrCodeString || generateFallbackQRData(purchase);
+      const qrCodeURL = generateQRCodeURL(qrData, 300);
       
       const link = document.createElement('a');
       link.href = qrCodeURL;
@@ -191,7 +221,8 @@ const BookingHistory = () => {
     } catch (error) {
       console.error('Error downloading QR code:', error);
       // Fallback: open in new tab
-      const qrCodeURL = generateQRCodeURL(purchase.qrCodeData?.qrCodeString || 'fallback-qr-data', 300);
+      const qrData = purchase.qrCodeData?.qrCodeString || generateFallbackQRData(purchase);
+      const qrCodeURL = generateQRCodeURL(qrData, 300);
       window.open(qrCodeURL, '_blank');
     } finally {
       setDownloadingQR(null);
@@ -585,7 +616,7 @@ const BookingHistory = () => {
                   </div>
                 )}
                 <img
-                  src={generateQRCodeURL(selectedTicket.qrCodeData?.qrCodeString || 'fallback-qr-data', 250)}
+                  src={generateQRCodeURL(selectedTicket.qrCodeData?.qrCodeString || generateFallbackQRData(selectedTicket), 250)}
                   alt="Ticket QR Code"
                   className={`w-64 h-64 block ${qrLoading ? 'hidden' : ''}`}
                   onLoad={() => setQrLoading(false)}
@@ -613,24 +644,47 @@ const BookingHistory = () => {
               <div className="flex items-center gap-2 text-sm">
                 <User className="w-4 h-4 text-gray-400" />
                 <span className="font-medium">Name:</span>
-                <span>{selectedTicket.qrCodeData?.userInfo?.name || 'N/A'}</span>
+                <span>{selectedTicket.qrCodeData?.userInfo?.name || selectedTicket.userInfo?.firstName + ' ' + selectedTicket.userInfo?.lastName || 'N/A'}</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <Mail className="w-4 h-4 text-gray-400" />
                 <span className="font-medium">Email:</span>
-                <span>{selectedTicket.qrCodeData?.userInfo?.email || 'N/A'}</span>
+                <span>{selectedTicket.qrCodeData?.userInfo?.email || selectedTicket.userInfo?.email || 'N/A'}</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <Phone className="w-4 h-4 text-gray-400" />
                 <span className="font-medium">Phone:</span>
-                <span>{selectedTicket.qrCodeData?.userInfo?.phone || 'N/A'}</span>
+                <span>{selectedTicket.qrCodeData?.userInfo?.phone || selectedTicket.userInfo?.phoneNo || 'N/A'}</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <CreditCard className="w-4 h-4 text-gray-400" />
+                <span className="font-medium">NIC/Passport:</span>
+                <span>{selectedTicket.qrCodeData?.userInfo?.nicPassport || selectedTicket.userInfo?.nicPassport || 'N/A'}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <Ticket className="w-4 h-4 text-gray-400" />
                 <span className="font-medium">Order:</span>
                 <span>{selectedTicket.orderReference}</span>
               </div>
+              <div className="flex items-center gap-2 text-sm">
+                <DollarSign className="w-4 h-4 text-gray-400" />
+                <span className="font-medium">Total Amount:</span>
+                <span>LKR {selectedTicket.totalAmount?.toLocaleString() || 'N/A'}</span>
+              </div>
             </div>
+
+            {/* QR Data Preview (for debugging - can be removed in production) */}
+            {selectedTicket.qrCodeData?.qrCodeString && (
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                <h5 className="text-sm font-medium text-gray-700 mb-2">QR Code Contains:</h5>
+                <div className="text-xs text-gray-600 max-h-32 overflow-y-auto">
+                  {selectedTicket.qrCodeData.qrCodeString.length > 200 
+                    ? selectedTicket.qrCodeData.qrCodeString.substring(0, 200) + '...' 
+                    : selectedTicket.qrCodeData.qrCodeString}
+                </div>
+                <p className="text-xs text-green-600 mt-1">✓ Contains complete booking details</p>
+              </div>
+            )}
 
             {/* Actions */}
             <div className="flex gap-3">
