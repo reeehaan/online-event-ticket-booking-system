@@ -17,6 +17,7 @@ const Header = ({ userType = 'guest' }) => {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [userName, setUserName] = useState('');
     const [currentUserType, setCurrentUserType] = useState(userType);
+    const [userProfilePicture, setUserProfilePicture] = useState(null);
     
     // Recent Events State
     const [recentEvents, setRecentEvents] = useState([]);
@@ -77,6 +78,10 @@ const Header = ({ userType = 'guest' }) => {
         // Listen for localStorage changes from same tab
         const handleLocalStorageUpdate = () => {
             checkAuthStatus();
+            // Also refresh profile picture when profile is updated
+            if (isLoggedIn) {
+                setUserProfilePicture(null); // This will trigger a re-fetch
+            }
         };
 
         window.addEventListener('storage', handleStorageChange);
@@ -87,6 +92,43 @@ const Header = ({ userType = 'guest' }) => {
             window.removeEventListener('localStorageUpdate', handleLocalStorageUpdate);
         };
     }, [userType]);
+
+    // Fetch user profile picture
+    useEffect(() => {
+        const fetchUserProfile = async () => {
+            if (!isLoggedIn) return;
+            
+            try {
+                const token = localStorage.getItem('authToken');
+                if (!token) return;
+
+                let apiEndpoint = '';
+                if (currentUserType === 'organizer') {
+                    apiEndpoint = 'http://localhost:3000/api/organizer-profile/profile';
+                } else if (currentUserType === 'attendee') {
+                    apiEndpoint = 'http://localhost:3000/api/attendee-profile/profile';
+                } else {
+                    return;
+                }
+
+                const response = await axios.get(apiEndpoint, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.data.success && response.data.data.profilePicture) {
+                    setUserProfilePicture(response.data.data.profilePicture);
+                }
+            } catch (error) {
+                console.error('Failed to fetch user profile:', error);
+                setUserProfilePicture(null);
+            }
+        };
+
+        fetchUserProfile();
+    }, [isLoggedIn, currentUserType]);
 
     // Fetch recent events
     useEffect(() => {
@@ -223,6 +265,7 @@ const Header = ({ userType = 'guest' }) => {
         logoutUser();
         setIsLoggedIn(false);
         setUserName('');
+        setUserProfilePicture(null);
         setIsProfileOpen(false);
         
         // Notify other components about logout
@@ -309,7 +352,20 @@ const Header = ({ userType = 'guest' }) => {
                                     onClick={() => setIsProfileOpen(!isProfileOpen)}
                                     className={`flex items-center gap-2 p-2 rounded-full transition-all duration-300 ${getTextStyles(true)}`}
                                 >
-                                    <User className="w-5 h-5 lg:w-6 lg:h-6" />
+                                    <div className="relative">
+                                        {userProfilePicture ? (
+                                            <img 
+                                                src={userProfilePicture} 
+                                                alt="Profile" 
+                                                className="w-8 h-8 lg:w-9 lg:h-9 rounded-full object-cover border-2 border-white/20"
+                                                onError={() => setUserProfilePicture(null)}
+                                            />
+                                        ) : (
+                                            <div className={`w-8 h-8 lg:w-9 lg:h-9 rounded-full ${currentUserType === 'organizer' ? 'bg-purple-600' : 'bg-blue-600'} flex items-center justify-center text-white text-sm font-bold border-2 border-white/20`}>
+                                                {userName ? userName.charAt(0).toUpperCase() : 'U'}
+                                            </div>
+                                        )}
+                                    </div>
                                     <span className="text-m font-extrabold hidden md:inline">{userName}</span>
                                     <span className="text-xs bg-blue-100 text-blue-400 px-2 py-1 rounded-full hidden lg:inline">
                                         {currentUserType}
