@@ -115,6 +115,34 @@ const purchaseSchema = new mongoose.Schema({
         required: false,
         unique: true
     },
+
+    // Comprehensive QR code data for frontend
+    qrCodeData: {
+        qrCodeString: {
+            type: String,
+            required: false
+        },
+        userInfo: {
+            name: String,
+            email: String,
+            phone: String,
+            nicPassport: String
+        },
+        eventInfo: {
+            title: String,
+            date: String,
+            venue: String
+        },
+        ticketInfo: [{
+            ticketName: String,
+            quantity: Number,
+            price: Number
+        }],
+        totalTickets: Number,
+        totalAmount: Number,
+        orderReference: String,
+        purchaseDate: String
+    },
     
     // Unique order reference
     orderReference: {
@@ -176,6 +204,83 @@ purchaseSchema.pre('save', function(next) {
     
     next();
 });
+
+// Method to generate comprehensive QR code data
+purchaseSchema.methods.generateQRCodeData = function(eventData = null) {
+    const totalTickets = this.tickets.reduce((sum, ticket) => sum + ticket.quantity, 0);
+    
+    // Create comprehensive QR data object
+    const comprehensiveQRData = {
+        // Booking Details
+        bookingId: this._id.toString(),
+        orderReference: this.orderReference,
+        
+        // Customer Information
+        customerName: `${this.userInfo.firstName} ${this.userInfo.lastName}`,
+        customerEmail: this.userInfo.email,
+        customerPhone: this.userInfo.phoneNo,
+        customerNIC: this.userInfo.nicPassport,
+        
+        // Event Information
+        eventId: this.eventId.toString(),
+        eventTitle: eventData?.title || 'Event',
+        eventDate: eventData?.date || this.purchaseDate,
+        eventVenue: eventData?.venue || 'Venue TBA',
+        
+        // Ticket Information
+        tickets: this.tickets.map(ticket => ({
+            ticketType: ticket.ticketName,
+            quantity: ticket.quantity,
+            pricePerTicket: ticket.pricePerTicket,
+            subtotal: ticket.subtotal
+        })),
+        
+        // Payment Information
+        totalTickets: totalTickets,
+        subtotalAmount: this.subtotalAmount,
+        totalAmount: this.totalAmount,
+        paymentStatus: this.paymentStatus,
+        paymentMethod: this.paymentMethod,
+        
+        // Purchase Metadata
+        purchaseDate: this.purchaseDate,
+        status: this.status,
+        
+        // Validation
+        isValidated: this.isValidated || false,
+        timestamp: new Date().toISOString()
+    };
+    
+    // Generate QR code string (JSON string for complete data)
+    const qrCodeString = JSON.stringify(comprehensiveQRData);
+    
+    // Update qrCodeData field
+    this.qrCodeData = {
+        qrCodeString: qrCodeString,
+        userInfo: {
+            name: `${this.userInfo.firstName} ${this.userInfo.lastName}`,
+            email: this.userInfo.email,
+            phone: this.userInfo.phoneNo,
+            nicPassport: this.userInfo.nicPassport
+        },
+        eventInfo: {
+            title: eventData?.title || 'Event',
+            date: eventData?.date || this.purchaseDate,
+            venue: eventData?.venue || 'Venue TBA'
+        },
+        ticketInfo: this.tickets.map(ticket => ({
+            ticketName: ticket.ticketName,
+            quantity: ticket.quantity,
+            price: ticket.pricePerTicket
+        })),
+        totalTickets: totalTickets,
+        totalAmount: this.totalAmount,
+        orderReference: this.orderReference,
+        purchaseDate: this.purchaseDate
+    };
+    
+    return this.qrCodeData;
+};
 
 // Method to get total ticket count
 purchaseSchema.methods.getTotalTicketCount = function() {
