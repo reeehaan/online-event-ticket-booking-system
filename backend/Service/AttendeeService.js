@@ -182,7 +182,7 @@ const getBookingHistory = async (req, res) => {
         const purchases = await Purchase.find(query)
             .populate({
                 path: 'eventId',
-                select: 'title description date venue status',
+                select: 'title description date time venue status',
                 populate: {
                     path: 'createdBy',
                     select: 'firstName lastName organizationName'
@@ -217,6 +217,7 @@ const getBookingHistory = async (req, res) => {
                     _id: purchase.eventId._id,
                     name: purchase.eventId.title,
                     date: purchase.eventId.date,
+                    time: purchase.eventId.time,
                     venue: purchase.eventId.venue,
                     organizer: purchase.eventId.createdBy
                 } : null,
