@@ -230,13 +230,29 @@ const BookingHistory = () => {
   };
 
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString, timeString = null) => {
+    if (timeString && dateString) {
+      // Combine date and time properly
+      const dateOnly = dateString.split('T')[0]; // Get just the date part (YYYY-MM-DD)
+      const combinedDateTime = new Date(`${dateOnly}T${timeString}`);
+      
+      // Check if the combined date is valid
+      if (!isNaN(combinedDateTime.getTime())) {
+        return combinedDateTime.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+    }
+    
+    // Fallback: show only date without time if time is not available or invalid
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      day: 'numeric'
     });
   };
 
@@ -411,7 +427,7 @@ const BookingHistory = () => {
                           <div className="space-y-1 text-gray-600">
                             <div className="flex items-center gap-2">
                               <Calendar className="w-4 h-4" />
-                              <span>{formatDate(purchase.event?.date || purchase.purchaseDate)}</span>
+                              <span>{formatDate(purchase.event?.date || purchase.purchaseDate, purchase.event?.time)}</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <MapPin className="w-4 h-4" />
