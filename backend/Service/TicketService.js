@@ -4,6 +4,7 @@ const Purchase = require('../Models/Purchase');
 const User = require('../Models/User.js');
 const mongoose = require('mongoose');
 const crypto = require('crypto');
+const EmailService = require('./EmailService.js');
 
 // PayHere configuration
 const PAYHERE_CONFIG = {
@@ -474,7 +475,7 @@ const processPaymentSuccess = async (req, res) => {
 
         // Find purchase order
         const purchase = await Purchase.findOne({ orderReference: orderReference })
-            .populate('eventId', 'title date venue')
+            .populate('eventId', 'title date time venue')
             .populate('userId', 'firstName lastName email');
 
         if (!purchase) {
@@ -515,8 +516,22 @@ const processPaymentSuccess = async (req, res) => {
 
         await purchase.save();
 
-        // Here you would typically send confirmation email
-        // await sendConfirmationEmail(purchase);
+        // Send confirmation email with ticket details and QR code
+        try {
+            const emailResult = await EmailService.sendTicketConfirmation(purchase, eventData);
+            if (emailResult.success) {
+                // Update email sent status
+                purchase.emailSent = true;
+                await purchase.save();
+                console.log(`Confirmation email sent successfully to ${emailResult.email}`);
+            } else {
+                console.error(`Failed to send confirmation email to ${emailResult.email}:`, emailResult.error);
+                // Don't fail the payment process if email fails - just log it
+            }
+        } catch (emailError) {
+            console.error('Error sending confirmation email:', emailError);
+            // Don't fail the payment process if email fails
+        }
 
         res.status(200).json({
             success: true,
@@ -641,7 +656,7 @@ const getUserPurchases = async (req, res) => {
         const skip = (parseInt(page) - 1) * parseInt(limit);
         
         const purchases = await Purchase.find(query)
-            .populate('eventId', 'title date venue image category')
+            .populate('eventId', 'title date time venue image category')
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(parseInt(limit));
